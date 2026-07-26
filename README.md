@@ -185,7 +185,7 @@ erDiagram
 
 ### 1. Clone & Setup Project
 ```bash
-git clone https://github.com/your-username/Sabha_Attendance.git
+git clone https://github.com/omkarpraval/Sabha_Attendance.git
 cd Sabha_Attendance
 ```
 
