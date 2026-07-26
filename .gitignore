@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+.pnpm-store/
+
+# Build & Output
+dist/
+frontend/dist/
+build/
+
+# Python Cache & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+backend/__pycache__/
+venv/
+.venv/
+env/
+.env
+
+# Database & Storage
+*.db
+*.sqlite3
+sabha_attendance.db
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log

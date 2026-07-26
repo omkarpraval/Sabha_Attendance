@@ -1,0 +1,75 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+:root {
+  --bg-warm: #FDFBF7;
+  --primary-saffron: #E8A33D;
+  --primary-saffron-hover: #D98A2B;
+  --secondary-maroon: #8B3A3A;
+  --secondary-maroon-dark: #6E2C2C;
+  --status-present: #5B8C5B;
+  --status-absent: #C1554A;
+  --status-excused: #D9B166;
+  --text-charcoal: #3A322C;
+  --card-bg: #FFFFFF;
+  --border-warm: #EFE7DA;
+}
+
+body {
+  background-color: var(--bg-warm);
+  color: var(--text-charcoal);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  margin: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.font-serif-accent {
+  font-family: 'Cormorant Garamond', serif;
+}
+
+/* Diya Flame Keyframe Animation */
+@keyframes flameFlicker {
+  0% { transform: scale(1) rotate(-1deg); opacity: 0.95; }
+  25% { transform: scale(1.08) rotate(1deg); opacity: 1; filter: drop-shadow(0 0 6px #E8A33D); }
+  50% { transform: scale(0.96) rotate(-2deg); opacity: 0.9; }
+  75% { transform: scale(1.04) rotate(1deg); opacity: 1; filter: drop-shadow(0 0 10px #F0A93A); }
+  100% { transform: scale(1) rotate(-1deg); opacity: 0.95; }
+}
+
+.animate-diya-flame {
+  animation: flameFlicker 2s ease-in-out infinite;
+}
+
+/* Scan Pulse Radial Wave */
+@keyframes scanRipple {
+  0% {
+    box-shadow: 0 0 0 0 rgba(232, 163, 61, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 30px rgba(232, 163, 61, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(232, 163, 61, 0);
+  }
+}
+
+.animate-scan-ripple {
+  animation: scanRipple 1.6s ease-out infinite;
+}
+
+/* Subtle Card Glow */
+.warm-shadow {
+  box-shadow: 0 4px 20px -2px rgba(139, 58, 58, 0.06), 0 2px 6px -1px rgba(58, 50, 44, 0.04);
+}
+
+.warm-border {
+  border: 1px solid var(--border-warm);
+}
+
+/* Leaflet Custom Overrides */
+.leaflet-container {
+  border-radius: 1rem;
+  z-index: 10;
+}
