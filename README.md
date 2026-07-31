@@ -1,130 +1,149 @@
-# 🛕 Sabha Attendance System — Automatic QR Code & GPS Geofence Verification
+# 🛕 BAPS Sabha Attendance System — Automatic QR Code & GPS Geofence Verification
 
-A state-of-the-art, full-stack web application designed for automated, secure, and verifiable attendance tracking for Weekly Sabha gatherings. Built with **React 18**, **Tailwind CSS**, **FastAPI**, **SQLAlchemy**, **Leaflet Maps**, and **ReportLab PDF Engine**.
-
----
-
-## 🌟 Key System Features
-
-### 1. 🛡️ Dual-Verification Attendance Engine
-- **GPS Geofence Radius Verification**: Real-time browser GPS location lock verified against venue coordinates using the **Haversine formula**. Members can only mark attendance within the configured venue radius (10m - 500m).
-- **Dynamic QR Code Scanning**: Supports both venue-reusable QR codes and per-event unique QR codes.
-- **Multiple Scanner Options**: Supports live webcam scanning, QR photo upload (`.png`, `.jpg`), manual reference code entry, and simulated geofence testing.
-
-### 2. 👑 Admin Master Portal & Analytics
-- **Live Analytics Dashboard**: Real-time counter widgets for approved members, pending registrations, configured venues, and total scans.
-- **Pending Registration Queue**: Approval/rejection interface for new member registrations.
-- **User & Role Management**: Searchable member table with instant role toggle (`User` ↔ `Karyakar`).
-
-### 3. 📅 Event Management & Creation Wizard
-- **4-Step Creation Wizard**: Easily launch single or recurring Saturday/Sunday Sabhas.
-- **Event Lifecycle Control**: Open attendance or close event to auto-generate `ABSENT` records for unrecorded members and calculate streaks.
-- **Active & History Grids**: Clear separation between live open events and past completed events.
-
-### 4. 📍 Interactive Venue & Geofence Map
-- **Leaflet Interactive Map**: Drag map pins to place venue centers and adjust geofence radius dynamically from 10m to 500m.
-- **Google Maps Link Parser**: Paste any Google Maps URL (or place name) to automatically extract precise latitude and longitude.
-
-### 5. 📊 Dual Master Attendance Log Grids
-- **Event-Wise Grid View**: Displays all events with total headcount, present/absent stats, turnout ratio progress bars, and modal audit details.
-- **Individual Member-Wise Grid View**: Tracks member attendance totals, present/absent counts, current streak, and historical logs.
-
-### 6. 📄 Event-Wise PDF & Excel Report Exports
-- **Event-Grouped Reports**: Formatted Excel (`.xlsx`) and PDF (`.pdf`) documents.
-- **Top Header Details**: Every event section displays:
-  - **Event Title**: e.g., `Weekly Saturday Sabha`
-  - **Date & Time**: `2026-07-26 (18:00 - 21:00 IST)`
-  - **Location / Venue**: `BAPS Shri Swaminarayan Mandir`
-  - **Turnout Metrics**: `Total Headcount: 10 | Present: 8 | Absent: 2 (80% Turnout)`
-- **Direct Event Export Buttons**: Instant PDF and Excel export buttons on every completed event card and detail modal.
-
-### 7. 🖨️ Printable QR Poster Builder
-- **PNG Canvas Downloader**: Renders high-resolution 1:1 printable posters (`.png`).
-- **Print / PDF Layout**: Exact 1:1 print-ready poster layout for physical display at Sabha venues.
-
-### 8. 🪔 Member Portal & Diya Flame Streak Counter
-- **Diya Flame Streak Widget**: Dynamic streak tracker calculation rewarding continuous Sabha attendance.
-- **Top Status Banner**: Automatically replaces the scan button with an **`Attendance Verified: PRESENT`** success card once attendance is logged for the active event.
-- **Pre-Mark Excused Absence**: Allows members to submit advance absence requests with mandatory reason logging.
+A full-stack web application designed for automated, secure, and verifiable attendance tracking for Weekly Sabha gatherings. Built with **React 18**, **Tailwind CSS**, **FastAPI**, **SQLAlchemy**, **Leaflet Maps**, **HTML5-QRCode**, **OpenPyXL**, and **ReportLab PDF Engine**.
 
 ---
 
-## 📸 Application Screenshots & Output Showcase
+## 🌟 Key System Architecture & Core Features
 
-### 1. Member Login Portal
-Secure authentication with 10-digit mobile number validation and quick demo account buttons.
+### 1. 🛡️ Dual-Verification Engine (GPS Geofence + Dynamic QR)
+- **Haversine Distance Geofencing**: Real-time browser GPS location lock verified against venue coordinates. Attendance is validated only if the member is physically within the configured venue radius (10m - 500m).
+- **Dynamic QR Code Modes**: Supports venue-reusable QR codes as well as per-event unique QR codes.
+- **Multiple Scanning Modes**: Live webcam scanning, QR photo file upload (`.png`, `.jpg`), manual reference code entry, and simulated geofence testing.
+
+### 2. 👑 Role-Based Access Control (RBAC)
+- **User / Member Portal**: Personal dashboard with Diya Flame streak counter, lifetime attendance total, active event status, and advance excuse submission.
+- **Karyakar Volunteer Portal**: Event selector, pending user registration queue, member directory, and manual attendance override controls (`Mark Present` / `Mark Absent`).
+- **Admin Master Portal**: Full administrative control, system analytics counters, event creation wizard, venue geofence map builder, role management, and export generation.
+
+---
+
+## 📸 Comprehensive Frontend Output Showcase & Explanations
+
+### 1. Authentication & Onboarding
+
+#### Member Login Portal
+- **Description**: Secure sign-in modal with 10-digit phone number validation, password visibility toggle, quick demo account selector buttons (Admin, Karyakar, User), and a Progressive Web App (PWA) installation tip banner.
 ![Member Login Portal](docs/images/member_login.png)
 
----
-
-### 2. Member Dashboard & Diya Flame Streak Counter
-Personalized dashboard displaying current streak, lifetime attendance, and active attendance status.
-![Member Dashboard](docs/images/member_dashboard.png)
+#### Member Registration Modal
+- **Description**: Self-service signup modal allowing new members to register by providing their 10-digit mobile number, full name, date of birth (DOB), and password. Submitted accounts enter the Admin/Karyakar approval queue.
+![Member Registration Modal](docs/images/member_registration.png)
 
 ---
 
-### 3. Live QR Scanner & Geofence Verification
-Webcam scanner with real-time GPS location lock, image file scan, and simulated geofence verification.
-![QR Scanner Modal](docs/images/qr_scanner_modal.png)
+### 2. Member Portal & Attendance Scanning
+
+#### Member Personal Dashboard & Streak Counter
+- **Description**: Features a custom "Jai Swaminarayan" welcome header, a **Diya Flame Streak Counter** calculating consecutive sabha attendances, lifetime total attendance stats, the active event card, and personal calendar logs.
+![Member Personal Dashboard](docs/images/member_dashboard.png)
+
+#### Live QR Scanner & Geofence Verification Modal
+- **Description**: Interactive modal featuring live webcam video scanning with target viewport overlay, real-time GPS location locking (`19.1813, 72.8537`), image file upload scanner, manual reference code verification, and simulated geofence test buttons (`Scan AT Venue` vs `Scan FAR AWAY`).
+![Live QR Scanner Modal](docs/images/qr_scanner_modal.png)
+
+#### Personal Attendance Calendar & Pre-mark Excused Sessions
+- **Description**: Historical attendance logs for the member with color-coded status badges (**PRESENT** in green, **ABSENT** in red), marking method details, and an **Upcoming Sabha Sessions** card with a **Pre-mark Excused** button for advance absence logging.
+![Member Attendance History](docs/images/member_attendance_history.png)
 
 ---
 
-### 4. Admin Master Portal Analytics
-System analytics overview featuring pending user approval queue and quick access action buttons.
-![Admin Master Portal](docs/images/admin_analytics.png)
+### 3. Karyakar Volunteer Attendance Control
+
+#### Volunteer Control Portal & Manual Override Table
+- **Description**: Dedicated dashboard for Karyakars featuring event selector dropdown, total present counter, pending signup notifications badge, member directory, and direct **Mark Present** / **Mark Absent** manual override buttons.
+![Karyakar Volunteer Control Portal](docs/images/karyakar_portal.png)
 
 ---
 
-### 5. Event Master Schedule & Poster Builder
-Management interface for active and completed events with instant poster creation.
-![Events & QR Codes Management](docs/images/events_management.png)
+### 4. Admin Master Portal & Event Management
+
+#### Admin Dashboard & System Analytics
+- **Description**: Overview dashboard featuring key metric counters (Approved Members, Pending Approvals, Total Venues Configured, Total Scans Logged), Pending New User Approval Queue with instant **Approve** / **Reject** buttons, and active event status card.
+![Admin Master Dashboard](docs/images/admin_dashboard.png)
+
+#### Active & Scheduled Events Master Schedule
+- **Description**: Lists all open sabha events with details on venue radius, QR mode reference code, printable QR poster generator button, and **Close Sabha** action button.
+![Active & Scheduled Events](docs/images/admin_active_events.png)
+
+#### Past & Completed Events History Grid
+- **Description**: Grid displaying all closed/completed sabha sessions. Every completed event card includes direct **Export PDF** and **Export Excel** buttons for immediate event-wise report downloads.
+![Past & Completed Events History Grid](docs/images/admin_completed_events.png)
 
 ---
 
-### 6. Interactive Venue & Geofence Map
-Leaflet map widget with radius slider and Google Maps URL location resolver.
-![Venues & Radius Map](docs/images/geofence_map.png)
+### 5. 4-Step Event Creation Wizard
+
+| Step | Interface | Feature Description |
+| :---: | :---: | :--- |
+| **Step 1** | ![Wizard Step 1](docs/images/event_wizard_step1.png) | **Basic Event Details**: Configure Sabha Title, Event Date, Start & End Time (IST), "Reset to Live Clock" helper, and automatic recurring Saturday sabhas toggle. |
+| **Step 2** | ![Wizard Step 2](docs/images/event_wizard_step2.png) | **Venue Selection**: Choose from saved Mandir venue geofences with configured radii (e.g., 40m, 50m, 60m). |
+| **Step 3** | ![Wizard Step 3](docs/images/event_wizard_step3.png) | **QR Code Mode**: Select between **Reusable QR** (tied indefinitely to venue poster) or **Per-Event Fresh QR** (unique to specific date). |
+| **Step 4** | ![Wizard Step 4](docs/images/event_wizard_step4.png) | **Summary Confirmation**: Final review of Title, Date, Time, and QR Mode before publishing live to the system. |
 
 ---
 
-### 7. Dual Master Attendance Log (Event & Member Grids)
-Analytics view supporting Event-Wise and Member-Wise grid layouts.
-![Master Attendance Log Grid](docs/images/master_attendance_grid.png)
+### 6. Mandir Venues & Leaflet Geofence Map
+
+#### Venue Geofence Configuration & Google Maps Link Extractor
+- **Description**: Panel showing saved Mandir venues list with edit/delete buttons, address description fields, geofence radius slider (10m - 500m range), and instant Google Maps URL link location extractor.
+![Venue Geofence Configuration](docs/images/venue_management.png)
+
+#### Leaflet Interactive Map Geofence Center
+- **Description**: Interactive Leaflet map widget with draggable pin center, red dashed geofence radius circle overlay visualizer, and "Save Venue & Geofence Circle" action button.
+![Leaflet Interactive Map Geofence Center](docs/images/interactive_geofence_map.png)
 
 ---
 
-### 8. Event Attendance Audit Modal
-Detailed attendance log with status indicators, audit logs, and direct export options.
-![Event Attendance Audit Modal](docs/images/attendance_audit_modal.png)
+### 7. User & Role Management
+
+#### Member Directory & Role Toggle Table
+- **Description**: Manage all registered members with name/phone search bar, role filter dropdown (`All Roles`, `Admin`, `Karyakar`, `User`), streak/total count metrics, and instant role promotion/demotion buttons (**Promote to Karyakar** / **Demote to User**).
+![User & Role Management Table](docs/images/user_role_management.png)
+
+---
+
+### 8. Master Attendance Log Analytics
+
+#### Master Attendance Log — Event-Wise Grid View
+- **Description**: Analytics layout displaying events with total headcount, present/absent stats, turnout ratio progress bars, direct PDF/Excel export buttons, and **View Full Event Logs & Audits** detail modal launcher.
+![Event-Wise Grid View](docs/images/master_attendance_event_grid.png)
+
+#### Master Attendance Log — Individual Member-Wise Grid View
+- **Description**: Analytics layout displaying member cards with Total Attended, Present Count, Absent Count, Current Streak, and **View Member Attendance History** button.
+![Individual Member-Wise Grid View](docs/images/master_attendance_member_grid.png)
 
 ---
 
 ### 9. Attendance Data Exports & Reports
-Report generator supporting event-specific or date-range Excel and PDF exports.
-![Reports and Exports](docs/images/excel_pdf_reports.png)
 
----
-
-### 10. Event-Wise PDF Official Attendance Report Sample
-Generated PDF document with Event Name, Location, Date, and Turnout Metrics at the top.
-![PDF Export Sample](docs/images/pdf_export_sample.png)
+#### Custom Export Generator (Excel & PDF)
+- **Description**: Generator supporting event-specific selection or custom date range filtering. Downloads event-grouped Excel spreadsheets (`.xlsx`) and printable PDF summary reports (`.pdf`) featuring event title, date, time, venue, and turnout stats at the top of every section.
+![Attendance Data Exports & Reports](docs/images/attendance_reports_export.png)
 
 ---
 
 ## 🛠️ Technology Stack
 
-### Frontend
-- **Framework**: React 18 (Vite)
-- **Styling**: Vanilla CSS, Tailwind CSS tokens, Custom CSS variables
-- **Icons**: Lucide React
-- **Mapping & Geofencing**: Leaflet, React-Leaflet
-- **QR Code Engine**: HTML5-QRCode
-
-### Backend
-- **Framework**: FastAPI (Python 3.13)
-- **Database**: SQLite (Development) / PostgreSQL (Production) with SQLAlchemy ORM
-- **Authentication**: PyJWT (JSON Web Tokens) with Bearer header & query param support
-- **Report Generation**: OpenPyXL (Excel), ReportLab (PDF)
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      FRONTEND (Vite + React)                    │
+│  React 18 • Tailwind CSS • Lucide Icons • Leaflet • HTML5-QRCode │
+└─────────────────────────────────────────────────────────────────┘
+                                 │
+                            HTTP / REST
+                                 ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      BACKEND (FastAPI + Python)                 │
+│  FastAPI 0.115 • SQLAlchemy ORM • PyJWT • OpenPyXL • ReportLab  │
+└─────────────────────────────────────────────────────────────────┘
+                                 │
+                                 ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     DATABASE (SQLite / PostgreSQL)              │
+│       Users • Venues • Events • Attendance • AuditLogs          │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -177,11 +196,11 @@ erDiagram
 
 ---
 
-## 🚀 Quick Start & Installation
+## 🚀 Installation & Quick Start Guide
 
 ### Prerequisites
-- **Node.js** (v18 or higher)
-- **Python** (v3.10 or higher)
+- **Node.js**: v18.0 or higher
+- **Python**: v3.10 or higher
 
 ### 1. Clone & Setup Project
 ```bash
@@ -202,7 +221,7 @@ npm install
 ```
 
 ### 4. Run Application (Single Command)
-Run both backend (FastAPI at `http://127.0.0.1:8000`) and frontend (Vite at `http://localhost:5173`) using the runner script:
+Execute the single runner script to start both FastAPI Backend (`http://127.0.0.1:8000`) and Vite Frontend (`http://localhost:5173`):
 ```bash
 cd ..
 python run.py
@@ -212,37 +231,13 @@ python run.py
 
 ## 🔑 Demo Login Accounts
 
-Use these pre-configured accounts to test the application immediately:
-
 | Role | Mobile Phone | Password | Access Level |
 | :--- | :--- | :--- | :--- |
-| **Admin** | `9999999999` | `admin123` | Full System Access, Event Creation, Venue Map, Audits & Reports |
+| **Admin** | `9999999999` | `admin123` | Full Access, Event Creation, Venue Map, Role Mgmt, Reports |
 | **Karyakar** | `8888888888` | `karyakar123` | Event View, Manual Attendance Marking, Export Reports |
 | **User / Member** | `7777777777` | `user123` | Self Attendance Scan, Diya Streak Tracker, Excuse Submission |
 
 ---
 
-## 📡 API Reference Summary
-
-### Authentication
-- `POST /api/auth/signup` — Member registration
-- `POST /api/auth/login` — Phone & Password login (returns JWT token)
-- `GET /api/auth/me` — Current authenticated user profile
-
-### Events & Venues
-- `GET /api/events` — Fetch all events
-- `POST /api/events` — Create new event
-- `POST /api/events/{id}/close` — Close event attendance (triggers auto-absent)
-- `GET /api/venues` — Fetch saved venue geofences
-- `POST /api/venues` — Create or update venue geofence
-
-### Attendance & Reports
-- `POST /api/attendance/scan` — Submit QR scan with GPS coordinates
-- `GET /api/attendance/history` — User/Event attendance history
-- `GET /api/reports/export/excel` — Download event-grouped Excel report (`.xlsx`)
-- `GET /api/reports/export/pdf` — Download event-grouped PDF report (`.pdf`)
-
----
-
 ## 📄 License
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the MIT License. See `LICENSE` for details.
