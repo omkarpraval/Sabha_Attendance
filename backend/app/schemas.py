@@ -9,9 +9,16 @@ def validate_10_digit_phone(v: str) -> str:
         raise ValueError("Mobile phone number must be exactly 10 numeric digits.")
     return cleaned
 
+def validate_email_format(v: str) -> str:
+    cleaned = v.strip().lower() if v else ""
+    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", cleaned):
+        raise ValueError("Please provide a valid email address containing '@' and domain.")
+    return cleaned
+
 # Auth Schemas
 class SignupRequest(BaseModel):
     phone: str
+    email: str
     name: str
     dob: Optional[str] = None
     password: str
@@ -21,23 +28,43 @@ class SignupRequest(BaseModel):
     def check_phone(cls, v: str) -> str:
         return validate_10_digit_phone(v)
 
+    @field_validator('email')
+    @classmethod
+    def check_email(cls, v: str) -> str:
+        return validate_email_format(v)
+
+from pydantic import BaseModel, Field, field_validator, model_validator
+
 class LoginRequest(BaseModel):
-    phone: str
-    password: Optional[str] = None
-    otp: Optional[str] = None
+    identifier: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    password: str
 
-    @field_validator('phone')
+    @model_validator(mode='before')
     @classmethod
-    def check_phone(cls, v: str) -> str:
-        return validate_10_digit_phone(v)
+    def resolve_identifier(cls, values: dict) -> dict:
+        if isinstance(values, dict):
+            ident = values.get("identifier") or values.get("phone") or values.get("email")
+            if not ident:
+                raise ValueError("Must provide mobile phone number or email address.")
+            values["identifier"] = str(ident).strip()
+        return values
 
-class OTPRequest(BaseModel):
-    phone: str
-
-    @field_validator('phone')
+    @field_validator('identifier')
     @classmethod
-    def check_phone(cls, v: str) -> str:
-        return validate_10_digit_phone(v)
+    def check_identifier(cls, v: str) -> str:
+        cleaned = v.strip()
+        if "@" in cleaned:
+            return validate_email_format(cleaned)
+        return validate_10_digit_phone(cleaned)
+
+class ForgotPasswordRequest(BaseModel):
+    identifier: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -47,16 +74,49 @@ class TokenResponse(BaseModel):
 class UserResponse(BaseModel):
     id: int
     phone: str
+    email: Optional[str] = None
     name: str
     dob: Optional[str] = None
     role: str
     status: str
+    member_category: str = "satsangi"
     current_streak: int
     lifetime_count: int
     created_at: datetime.datetime
 
     class Config:
         from_attributes = True
+
+class UserCreateByAdmin(BaseModel):
+    phone: str
+    email: Optional[str] = None
+    name: str
+    dob: Optional[str] = None
+    password: str
+    member_category: str = "satsangi"
+    role: str = "user"
+
+    @field_validator('phone')
+    @classmethod
+    def check_phone(cls, v: str) -> str:
+        return validate_10_digit_phone(v)
+
+    @field_validator('email')
+    @classmethod
+    def check_email(cls, v: Optional[str]) -> Optional[str]:
+        if v and v.strip():
+            return validate_email_format(v)
+        return None
+
+class UserUpdateByAdmin(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    dob: Optional[str] = None
+    password: Optional[str] = None
+    member_category: Optional[str] = None
+    role: Optional[str] = None
+    status: Optional[str] = None
 
 # Venue Schemas
 class VenueCreate(BaseModel):

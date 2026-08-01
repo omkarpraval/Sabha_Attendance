@@ -207,7 +207,7 @@ export default function UserPortal({ user, onUserUpdated }) {
                   Attendance Status: {activeEventRecord.status.toUpperCase()}
                 </h4>
                 <p className="text-xs text-[#3A322C]/80">
-                  Logged on {activeEventRecord.event_date} • Marked by {activeEventRecord.marked_by_name || 'Self QR'}
+                  Logged on {activeEventRecord.event_date} {activeEventRecord.timestamp_utc ? `at ${formatISTTime(activeEventRecord.timestamp_utc)}` : ''} • Marked by {activeEventRecord.marked_by_name || 'Self QR'}
                 </p>
                 <div className="pt-2">
                   <span className={`inline-block px-3.5 py-1 rounded-full text-xs font-semibold text-white shadow-2xs ${
@@ -304,7 +304,7 @@ export default function UserPortal({ user, onUserUpdated }) {
                       {item.event_title}
                     </div>
                     <div className="text-xs text-[#3A322C]/60">
-                      {item.event_date} • Marked by: {item.marked_by_name}
+                      {item.event_date} {item.timestamp_utc ? `at ${formatISTTime(item.timestamp_utc)}` : ''} • Marked by: {item.marked_by_name}
                     </div>
                   </div>
                 </div>

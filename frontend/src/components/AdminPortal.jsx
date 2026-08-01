@@ -7,6 +7,7 @@ import {
 import { apiFetch } from '../api';
 import VenueMap from './VenueMap';
 import QRScannerModal from './QRScannerModal';
+import UserManagementSection from './UserManagementSection';
 
 const getLiveEventTimes = () => {
   const now = new Date();
@@ -468,6 +469,21 @@ export default function AdminPortal({ user, onUserUpdated }) {
     }
   };
 
+  const handleAdminManualMark = async (userId, eventId, newStatus) => {
+    try {
+      await apiFetch('/attendance/manual', {
+        method: 'POST',
+        body: JSON.stringify({
+          user_id: userId,
+          event_id: eventId,
+          status: newStatus
+        })
+      });
+      showToast(`Marked member as ${newStatus.toUpperCase()}`);
+      loadAdminData();
+    } catch (err) { alert(err.message); }
+  };
+
   // User Approval Handlers
   const handleApproveUser = async (userId) => {
     try {
@@ -733,17 +749,17 @@ export default function AdminPortal({ user, onUserUpdated }) {
             </h2>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
             <button
               onClick={() => setShowSelfScanner(true)}
-              className="bg-[#E8A33D] hover:bg-[#D98A2B] text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+              className="bg-[#E8A33D] hover:bg-[#D98A2B] text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer w-full sm:w-auto"
             >
               <QrCode className="w-4 h-4" />
               <span>Scan My Attendance</span>
             </button>
             <button
               onClick={handleOpenWizard}
-              className="bg-[#8B3A3A] hover:bg-[#6E2C2C] text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+              className="bg-[#8B3A3A] hover:bg-[#6E2C2C] text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer w-full sm:w-auto"
             >
               <Plus className="w-4 h-4" />
               <span>New Event Wizard</span>
@@ -754,12 +770,11 @@ export default function AdminPortal({ user, onUserUpdated }) {
         {/* Navigation Tabs */}
         <div className="flex items-center gap-2 mt-4 overflow-x-auto pb-1 text-xs font-semibold">
           {[
-            { id: 'dashboard', label: 'Dashboard', icon: Layers, badge: pendingUsers.length },
+            { id: 'dashboard', label: 'Dashboard', icon: Layers },
             { id: 'events', label: 'Events & QR Codes', icon: Calendar },
             { id: 'venues', label: 'Venues & Radius Map', icon: MapPin },
             { id: 'users', label: 'User & Role Management', icon: Users },
             { id: 'attendance', label: 'Master Attendance Log', icon: UserCheck },
-            { id: 'reports', label: 'Reports & Exports', icon: FileSpreadsheet },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -789,14 +804,10 @@ export default function AdminPortal({ user, onUserUpdated }) {
       {/* TAB 1: DASHBOARD OVERVIEW */}
       {activeTab === 'dashboard' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-white p-5 rounded-2xl warm-shadow border border-[#EFE7DA]">
-              <div className="text-xs text-[#3A322C]/70 font-semibold mb-1">Approved Members</div>
+              <div className="text-xs text-[#3A322C]/70 font-semibold mb-1">Total Active Members</div>
               <div className="font-serif-accent text-3xl font-bold text-[#8B3A3A]">{allUsers.length}</div>
-            </div>
-            <div className="bg-white p-5 rounded-2xl warm-shadow border border-[#EFE7DA]">
-              <div className="text-xs text-[#3A322C]/70 font-semibold mb-1">Pending Approvals</div>
-              <div className="font-serif-accent text-3xl font-bold text-[#E8A33D]">{pendingUsers.length}</div>
             </div>
             <div className="bg-white p-5 rounded-2xl warm-shadow border border-[#EFE7DA]">
               <div className="text-xs text-[#3A322C]/70 font-semibold mb-1">Total Venues Configured</div>
@@ -807,42 +818,6 @@ export default function AdminPortal({ user, onUserUpdated }) {
               <div className="font-serif-accent text-3xl font-bold text-[#3A322C]">{attendanceRecords.length}</div>
             </div>
           </div>
-
-          {pendingUsers.length > 0 && (
-            <div className="bg-white rounded-2xl p-6 warm-shadow border border-[#EFE7DA] space-y-4">
-              <div className="flex items-center gap-2 text-[#E8A33D] font-bold text-sm">
-                <AlertCircle className="w-5 h-5 text-[#E8A33D]" />
-                <span>Pending New User Approval Queue ({pendingUsers.length})</span>
-              </div>
-
-              <div className="divide-y divide-[#EFE7DA]">
-                {pendingUsers.map(pUser => (
-                  <div key={pUser.id} className="py-3 flex items-center justify-between gap-4">
-                    <div>
-                      <div className="font-semibold text-sm text-[#3A322C]">{pUser.name}</div>
-                      <div className="text-xs text-[#3A322C]/60">
-                        Phone: {pUser.phone} {pUser.dob && `• DOB: ${pUser.dob}`} • Signed up {new Date(pUser.created_at).toLocaleDateString()}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleApproveUser(pUser.id)}
-                        className="bg-[#5B8C5B] hover:bg-[#4A734A] text-white text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer"
-                      >
-                        <UserCheck className="w-3.5 h-3.5" /> Approve
-                      </button>
-                      <button
-                        onClick={() => handleRejectUser(pUser.id)}
-                        className="bg-[#C1554A] hover:bg-[#A8453B] text-white text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer"
-                      >
-                        <UserX className="w-3.5 h-3.5" /> Reject
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {activeEvent && (
             <div className="bg-white rounded-2xl p-6 warm-shadow border border-[#EFE7DA] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -858,17 +833,24 @@ export default function AdminPortal({ user, onUserUpdated }) {
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+                <button
+                  onClick={() => setSelectedDetailModal({ type: 'event', data: activeEvent })}
+                  className="bg-[#5B8C5B] hover:bg-[#4A734A] text-white font-semibold text-xs px-3.5 py-2.5 rounded-xl shadow-xs flex items-center justify-center gap-1.5 cursor-pointer w-full sm:w-auto"
+                >
+                  <UserCheck className="w-4 h-4" /> Live Attendance & Override
+                </button>
+
                 <button
                   onClick={() => handleViewQR(activeEvent.id)}
-                  className="bg-[#FDFBF7] hover:bg-[#EFE7DA] text-[#8B3A3A] font-semibold text-xs px-3 py-2 rounded-xl border border-[#EFE7DA] flex items-center gap-1.5 cursor-pointer"
+                  className="bg-[#FDFBF7] hover:bg-[#EFE7DA] text-[#8B3A3A] font-semibold text-xs px-3.5 py-2.5 rounded-xl border border-[#EFE7DA] flex items-center justify-center gap-1.5 cursor-pointer w-full sm:w-auto"
                 >
                   <QrCode className="w-4 h-4" /> View QR Code
                 </button>
                 {activeEvent.status === 'open' && (
                   <button
                     onClick={() => handleCloseEvent(activeEvent.id)}
-                    className="bg-[#C1554A] hover:bg-[#A8453B] text-white font-semibold text-xs px-3 py-2 rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer"
+                    className="bg-[#C1554A] hover:bg-[#A8453B] text-white font-semibold text-xs px-3.5 py-2.5 rounded-xl shadow-xs flex items-center justify-center gap-1.5 cursor-pointer w-full sm:w-auto"
                   >
                     <Lock className="w-4 h-4" /> Close Attendance (Auto-Absent)
                   </button>
@@ -948,17 +930,24 @@ export default function AdminPortal({ user, onUserUpdated }) {
                       <div className="text-[11px] text-[#8B3A3A] font-semibold">QR Mode: {ev.qr_mode} • Ref: {ev.qr_code_reference}</div>
                     </div>
 
-                    <div className="flex items-center gap-2 pt-2 border-t border-[#EFE7DA]">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-[#EFE7DA]">
+                      <button
+                        onClick={() => setSelectedDetailModal({ type: 'event', data: ev })}
+                        className="w-full bg-[#5B8C5B] hover:bg-[#4A734A] text-white font-semibold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                      >
+                        <UserCheck className="w-3.5 h-3.5" /> Live Attendance
+                      </button>
+
                       <button
                         onClick={() => handleViewQR(ev.id)}
-                        className="flex-1 bg-white hover:bg-[#EFE7DA] text-[#8B3A3A] border border-[#EFE7DA] font-semibold text-xs py-2 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                        className="w-full bg-white hover:bg-[#EFE7DA] text-[#8B3A3A] border border-[#EFE7DA] font-semibold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
                       >
                         <QrCode className="w-3.5 h-3.5" /> Printable QR
                       </button>
 
                       <button
                         onClick={() => handleCloseEvent(ev.id)}
-                        className="bg-[#C1554A] hover:bg-[#A8453B] text-white font-semibold text-xs px-3.5 py-2 rounded-xl cursor-pointer shadow-2xs flex items-center gap-1"
+                        className="w-full bg-[#C1554A] hover:bg-[#A8453B] text-white font-semibold text-xs py-2.5 rounded-xl cursor-pointer shadow-2xs flex items-center justify-center gap-1.5"
                       >
                         <Lock className="w-3.5 h-3.5" /> Close Sabha
                       </button>
@@ -1239,106 +1228,9 @@ export default function AdminPortal({ user, onUserUpdated }) {
         </div>
       )}
 
-      {/* TAB 4: USER ACCOUNT & KARYAKAR ROLE MANAGEMENT */}
+      {/* TAB 4: USER & ROLE MANAGEMENT */}
       {activeTab === 'users' && (
-        <div className="bg-white rounded-2xl p-6 warm-shadow border border-[#EFE7DA] space-y-4">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-[#EFE7DA] pb-4">
-            <div>
-              <h3 className="font-serif-accent text-xl font-bold text-[#8B3A3A]">
-                User Account & Karyakar Role Management ({filteredUsersList.length})
-              </h3>
-              <p className="text-xs text-[#3A322C]/70">Search members by name/phone or filter by user role</p>
-            </div>
-
-            <div className="flex items-center gap-2 w-full md:w-auto">
-              <div className="relative flex-1 md:w-64">
-                <Search className="w-4 h-4 absolute left-3 top-2.5 text-[#3A322C]/40" />
-                <input
-                  type="text"
-                  value={userSearchQuery}
-                  onChange={(e) => setUserSearchQuery(e.target.value)}
-                  placeholder="Search name or phone..."
-                  className="w-full pl-9 pr-8 py-2 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-xs text-[#3A322C] focus:outline-none focus:border-[#8B3A3A]"
-                />
-                {userSearchQuery && (
-                  <button
-                    onClick={() => setUserSearchQuery('')}
-                    className="absolute right-2.5 top-2 text-[#3A322C]/50 hover:text-[#8B3A3A] text-xs font-bold"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-
-              <div className="relative shrink-0">
-                <select
-                  value={userRoleFilter}
-                  onChange={(e) => setUserRoleFilter(e.target.value)}
-                  className="p-2 pr-7 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-xs font-semibold text-[#3A322C] cursor-pointer appearance-none"
-                >
-                  <option value="all">All Roles ({allUsers.length})</option>
-                  <option value="user">Users ({allUsers.filter(u=>u.role==='user').length})</option>
-                  <option value="karyakar">Karyakars ({allUsers.filter(u=>u.role==='karyakar').length})</option>
-                  <option value="admin">Admins ({allUsers.filter(u=>u.role==='admin').length})</option>
-                </select>
-                <ChevronDown className="w-3.5 h-3.5 absolute right-2 top-3 text-[#3A322C]/40 pointer-events-none" />
-              </div>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-[#3A322C]">
-              <thead>
-                <tr className="bg-[#FDFBF7] border-b border-[#EFE7DA] text-[#8B3A3A] uppercase font-bold text-[11px]">
-                  <th className="p-3">Member Name</th>
-                  <th className="p-3">Phone</th>
-                  <th className="p-3">Role</th>
-                  <th className="p-3">Streak / Total</th>
-                  <th className="p-3 text-right">Role Toggle</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#EFE7DA]">
-                {filteredUsersList.length === 0 ? (
-                  <tr>
-                    <td colSpan="5" className="p-6 text-center text-[#3A322C]/60 italic">
-                      No members match your search filter "{userSearchQuery}".
-                    </td>
-                  </tr>
-                ) : (
-                  filteredUsersList.map((u) => (
-                    <tr key={u.id} className="hover:bg-[#FDFBF7]/60 transition-colors">
-                      <td className="p-3 font-semibold">{u.name}</td>
-                      <td className="p-3 text-[#3A322C]/70">{u.phone}</td>
-                      <td className="p-3">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold capitalize ${
-                          u.role === 'admin' ? 'bg-[#8B3A3A]/15 text-[#8B3A3A]' :
-                          u.role === 'karyakar' ? 'bg-[#E8A33D]/20 text-[#E8A33D]' : 'bg-[#5B8C5B]/15 text-[#5B8C5B]'
-                        }`}>
-                          {u.role}
-                        </span>
-                      </td>
-                      <td className="p-3">{u.current_streak} streak ({u.lifetime_count} total)</td>
-                      <td className="p-3 text-right">
-                        {u.role !== 'admin' && (
-                          <button
-                            onClick={() => handleRoleToggle(u.id, u.role)}
-                            className={`px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
-                              u.role === 'karyakar'
-                                ? 'bg-[#C1554A]/10 text-[#C1554A] hover:bg-[#C1554A]/20 border border-[#C1554A]/30'
-                                : 'bg-[#E8A33D]/10 text-[#E8A33D] hover:bg-[#E8A33D]/20 border border-[#E8A33D]/30'
-                            }`}
-                          >
-                            {u.role === 'karyakar' ? 'Demote to User' : 'Promote to Karyakar'}
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <UserManagementSection currentUser={user} />
       )}
 
       {/* TAB 5: MASTER ATTENDANCE LOG & DUAL GRID VIEWS */}
@@ -1717,75 +1609,152 @@ export default function AdminPortal({ user, onUserUpdated }) {
 
                 {(() => {
                   const evStats = getEventStats(selectedDetailModal.data.id);
+                  const evRecords = attendanceRecords.filter(r => r.event_id === selectedDetailModal.data.id);
+                  const evRecordMap = {};
+                  evRecords.forEach(r => { evRecordMap[r.user_id] = r; });
+
                   return (
-                    <div className="grid grid-cols-3 gap-3 my-4 p-3.5 bg-[#FDFBF7] rounded-xl border border-[#EFE7DA] text-center text-xs font-semibold">
-                      <div>
-                        <div className="text-[10px] text-[#3A322C]/60 uppercase">Total Headcount</div>
-                        <div className="text-lg font-bold text-[#3A322C]">{evStats.total}</div>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-3 gap-3 my-2 p-3.5 bg-[#FDFBF7] rounded-xl border border-[#EFE7DA] text-center text-xs font-semibold">
+                        <div>
+                          <div className="text-[10px] text-[#3A322C]/60 uppercase">Total Headcount</div>
+                          <div className="text-lg font-bold text-[#3A322C]">{allUsers.length}</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-[#5B8C5B] uppercase">Present Members</div>
+                          <div className="text-lg font-bold text-[#5B8C5B]">{evStats.present}</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-[#C1554A] uppercase">Absent / Excused</div>
+                          <div className="text-lg font-bold text-[#C1554A]">{evStats.absent}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="text-[10px] text-[#5B8C5B] uppercase">Present Members</div>
-                        <div className="text-lg font-bold text-[#5B8C5B]">{evStats.present}</div>
+
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-xs font-bold text-[#8B3A3A]">
+                          Live Attendance Directory & Manual Action Controls
+                        </div>
+                        <div className="relative w-64">
+                          <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-[#3A322C]/40" />
+                          <input
+                            type="text"
+                            value={userSearchQuery}
+                            onChange={(e) => setUserSearchQuery(e.target.value)}
+                            placeholder="Filter members by name/phone..."
+                            className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-xs text-[#3A322C] focus:outline-none focus:border-[#8B3A3A]"
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <div className="text-[10px] text-[#C1554A] uppercase">Absent / Excused</div>
-                        <div className="text-lg font-bold text-[#C1554A]">{evStats.absent}</div>
+
+                      <div className="overflow-x-auto border border-[#EFE7DA] rounded-xl max-h-96">
+                        <table className="w-full text-left text-xs text-[#3A322C]">
+                          <thead className="sticky top-0 bg-[#FDFBF7] z-10 border-b border-[#EFE7DA] text-[#8B3A3A] uppercase font-bold text-[11px]">
+                            <tr>
+                              <th className="p-3">Member Name & Phone</th>
+                              <th className="p-3">Status</th>
+                              <th className="p-3">Time Stamp</th>
+                              <th className="p-3">Marked By</th>
+                              <th className="p-3 text-right">Live Action</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[#EFE7DA]">
+                            {allUsers.filter(u =>
+                              u.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+                              u.phone.includes(userSearchQuery)
+                            ).length === 0 ? (
+                              <tr>
+                                <td colSpan="5" className="p-6 text-center text-[#3A322C]/60 italic">
+                                  No members match your search criteria.
+                                </td>
+                              </tr>
+                            ) : (
+                              allUsers.filter(u =>
+                                u.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+                                u.phone.includes(userSearchQuery)
+                              ).map((u) => {
+                                const r = evRecordMap[u.id];
+                                const isPresent = r?.status === 'present';
+                                const isAbsent = r?.status === 'absent';
+                                const isExcused = r?.status === 'excused';
+
+                                return (
+                                  <tr key={u.id} className="hover:bg-[#FDFBF7]/60 transition-colors">
+                                    <td className="p-3 font-semibold text-[#3A322C]">
+                                      {u.name}
+                                      <div className="text-[10px] text-[#3A322C]/60 font-normal">{u.phone}</div>
+                                    </td>
+
+                                    <td className="p-3">
+                                      {r ? (
+                                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                          isPresent ? 'bg-[#5B8C5B]/15 text-[#5B8C5B]' :
+                                          isAbsent ? 'bg-[#C1554A]/15 text-[#C1554A]' : 'bg-[#D9B166]/20 text-[#D9B166]'
+                                        }`}>
+                                          {r.status}
+                                        </span>
+                                      ) : (
+                                        <span className="text-xs text-[#3A322C]/50 italic">Not Marked Yet</span>
+                                      )}
+                                    </td>
+
+                                    <td className="p-3 font-mono text-[11px] text-[#8B3A3A] font-medium">
+                                      {r?.timestamp_utc ? (
+                                        new Date(r.timestamp_utc).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) + ' IST'
+                                      ) : (
+                                        <span className="text-[#3A322C]/40">-</span>
+                                      )}
+                                    </td>
+
+                                    <td className="p-3 text-[#3A322C]/70">
+                                      {r?.marked_by_name ? `Marked by ${r.marked_by_name}` : (r ? 'Self QR / Auto' : '-')}
+                                    </td>
+
+                                    <td className="p-3 text-right">
+                                      <div className="flex items-center justify-end gap-1.5">
+                                        <button
+                                          onClick={() => handleAdminManualMark(u.id, selectedDetailModal.data.id, 'present')}
+                                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1 ${
+                                            isPresent
+                                              ? 'bg-[#5B8C5B] text-white'
+                                              : 'bg-white hover:bg-[#5B8C5B] text-[#5B8C5B] hover:text-white border border-[#5B8C5B]'
+                                          }`}
+                                        >
+                                          <UserCheck className="w-3 h-3" />
+                                          <span>Present</span>
+                                        </button>
+
+                                        <button
+                                          onClick={() => handleAdminManualMark(u.id, selectedDetailModal.data.id, 'absent')}
+                                          className={`px-2 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                                            isAbsent
+                                              ? 'bg-[#C1554A] text-white'
+                                              : 'bg-white hover:bg-[#C1554A] text-[#C1554A] hover:text-white border border-[#C1554A]/40'
+                                          }`}
+                                        >
+                                          <XCircle className="w-3 h-3" />
+                                        </button>
+
+                                        {r && (
+                                          <button
+                                            onClick={() => handleOpenEditAttendance(r)}
+                                            className="bg-[#FDFBF7] hover:bg-[#EFE7DA] text-[#8B3A3A] border border-[#EFE7DA] text-[11px] font-semibold px-2 py-1 rounded-lg cursor-pointer ml-1"
+                                            title="Edit Record Details"
+                                          >
+                                            Edit
+                                          </button>
+                                        )}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })
+                            )}
+                          </tbody>
+                        </table>
                       </div>
                     </div>
                   );
                 })()}
-
-                <div className="overflow-x-auto border border-[#EFE7DA] rounded-xl">
-                  <table className="w-full text-left text-xs text-[#3A322C]">
-                    <thead>
-                      <tr className="bg-[#FDFBF7] border-b border-[#EFE7DA] text-[#8B3A3A] uppercase font-bold text-[11px]">
-                        <th className="p-3">Member Name & Phone</th>
-                        <th className="p-3">Status</th>
-                        <th className="p-3">Marked By (Karyakar / Admin / Self)</th>
-                        <th className="p-3">Method</th>
-                        <th className="p-3 text-right">Audit Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#EFE7DA]">
-                      {attendanceRecords.filter(r => r.event_id === selectedDetailModal.data.id).length === 0 ? (
-                        <tr>
-                          <td colSpan="5" className="p-6 text-center text-[#3A322C]/60 italic">
-                            No attendance records logged for this event.
-                          </td>
-                        </tr>
-                      ) : (
-                        attendanceRecords.filter(r => r.event_id === selectedDetailModal.data.id).map((r) => (
-                          <tr key={r.id} className="hover:bg-[#FDFBF7]/60">
-                            <td className="p-3 font-medium">
-                              {r.user_name}
-                              <div className="text-[10px] text-[#3A322C]/60">{r.user_phone}</div>
-                            </td>
-                            <td className="p-3">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                                r.status === 'present' ? 'bg-[#5B8C5B]/15 text-[#5B8C5B]' :
-                                r.status === 'absent' ? 'bg-[#C1554A]/15 text-[#C1554A]' : 'bg-[#D9B166]/20 text-[#D9B166]'
-                              }`}>
-                                {r.status}
-                              </span>
-                            </td>
-                            <td className="p-3 font-semibold text-[#8B3A3A]">
-                              {r.marked_by_name ? `Marked by ${r.marked_by_name}` : 'Self QR / Auto System'}
-                            </td>
-                            <td className="p-3 text-[#3A322C]/70 capitalize">{r.marking_method.replace('_', ' ')}</td>
-                            <td className="p-3 text-right">
-                              <button
-                                onClick={() => handleOpenEditAttendance(r)}
-                                className="bg-[#FDFBF7] hover:bg-[#EFE7DA] text-[#8B3A3A] border border-[#EFE7DA] text-xs font-semibold px-2.5 py-1 rounded-lg cursor-pointer"
-                              >
-                                Edit Record
-                              </button>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
               </div>
             )}
 
@@ -1839,7 +1808,8 @@ export default function AdminPortal({ user, onUserUpdated }) {
                       <tr className="bg-[#FDFBF7] border-b border-[#EFE7DA] text-[#8B3A3A] uppercase font-bold text-[11px]">
                         <th className="p-3">Sabha Event / Date</th>
                         <th className="p-3">Status</th>
-                        <th className="p-3">Marked By (Karyakar / Admin)</th>
+                        <th className="p-3">Time Stamp</th>
+                        <th className="p-3">Marked By</th>
                         <th className="p-3">Method</th>
                         <th className="p-3 text-right">Audit Action</th>
                       </tr>
@@ -1847,7 +1817,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
                     <tbody className="divide-y divide-[#EFE7DA]">
                       {attendanceRecords.filter(r => r.user_id === selectedDetailModal.data.id).length === 0 ? (
                         <tr>
-                          <td colSpan="5" className="p-6 text-center text-[#3A322C]/60 italic">
+                          <td colSpan="6" className="p-6 text-center text-[#3A322C]/60 italic">
                             No attendance history recorded for this member.
                           </td>
                         </tr>
@@ -1866,8 +1836,15 @@ export default function AdminPortal({ user, onUserUpdated }) {
                                 {r.status}
                               </span>
                             </td>
+                            <td className="p-3 font-mono text-[11px] text-[#8B3A3A] font-medium">
+                              {r.timestamp_utc ? (
+                                new Date(r.timestamp_utc).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) + ' IST'
+                              ) : (
+                                <span className="text-[#3A322C]/40">-</span>
+                              )}
+                            </td>
                             <td className="p-3 font-semibold text-[#8B3A3A]">
-                              {r.marked_by_name ? `Marked by Karyakar/Admin: ${r.marked_by_name}` : 'Self QR / Auto System'}
+                              {r.marked_by_name ? `Marked by ${r.marked_by_name}` : (r.marking_method === 'self_qr' ? 'Self (QR)' : 'Auto Absent')}
                             </td>
                             <td className="p-3 text-[#3A322C]/70 capitalize">{r.marking_method.replace('_', ' ')}</td>
                             <td className="p-3 text-right">

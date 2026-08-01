@@ -1,10 +1,20 @@
 import datetime
+from sqlalchemy import text
+from app.config import settings
 from app.database import engine, Base, SessionLocal
 from app.models import User, Venue, Event, Attendance, UserRole, UserStatus, EventStatus, MarkingMethod, AttendanceStatus, QRMode
 from app.auth import hash_password
 
 def seed_database():
-    Base.metadata.create_all(bind=engine)
+    if "sqlite" in settings.DATABASE_URL.lower():
+        Base.metadata.drop_all(bind=engine)
+        Base.metadata.create_all(bind=engine)
+    else:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR;"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_hash VARCHAR;"))
+            conn.commit()
+        Base.metadata.create_all(bind=engine)
     db = SessionLocal()
 
     # Clear existing tables if any
@@ -19,6 +29,7 @@ def seed_database():
     # 1. Create Admin User
     admin = User(
         phone="9999999999",
+        email="admin@sabha.org",
         name="Pujya Admin Swami",
         dob="1985-05-15",
         hashed_password=hash_password("admin123"),
@@ -32,6 +43,7 @@ def seed_database():
     # 2. Create Karyakar User
     karyakar = User(
         phone="8888888888",
+        email="karyakar@sabha.org",
         name="Priya Shah",
         dob="1995-08-20",
         hashed_password=hash_password("karyakar123"),
@@ -45,6 +57,7 @@ def seed_database():
     # 3. Create Regular Approved Users
     user1 = User(
         phone="7777777777",
+        email="user1@sabha.org",
         name="Aarav Patel",
         dob="2000-01-10",
         hashed_password=hash_password("user123"),
@@ -55,6 +68,7 @@ def seed_database():
     )
     user2 = User(
         phone="7777777778",
+        email="user2@sabha.org",
         name="Riya Sharma",
         dob="1998-11-04",
         hashed_password=hash_password("user123"),
@@ -67,6 +81,7 @@ def seed_database():
     # 4. Create Pending Approval User
     user_pending = User(
         phone="6666666666",
+        email="devang@sabha.org",
         name="Devang Mehta",
         dob="2002-06-25",
         hashed_password=hash_password("user123"),

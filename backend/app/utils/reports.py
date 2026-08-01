@@ -190,7 +190,7 @@ def generate_pdf_report(events_grouped: List[dict], title_suffix: str = "") -> b
         story.append(Paragraph(f"Total Headcount: <b>{ev['total_headcount']}</b>   |   Present: <b>{ev['present_count']}</b>   |   Absent: <b>{ev['absent_count']}</b>   (Turnout: {ev['turnout_pct']}%)", ev_metrics_style))
 
         # Table data
-        table_data = [["Member Name", "Phone Number", "Status", "Marked By", "Method", "Distance (m)"]]
+        table_data = [["Member Name", "Phone Number", "Status", "Marked By", "Time Stamp", "Distance (m)"]]
         
         if not ev["records"]:
             table_data.append(["No records logged for this event", "-", "-", "-", "-", "-"])
@@ -201,11 +201,11 @@ def generate_pdf_report(events_grouped: List[dict], title_suffix: str = "") -> b
                     r.get("user_phone", ""),
                     r.get("status", "").upper(),
                     r.get("marked_by_name", ""),
-                    r.get("marking_method", "").replace("_", " ").title(),
+                    r.get("timestamp_utc", "-"),
                     r.get("distance_meters", "N/A")
                 ])
 
-        t = Table(table_data, colWidths=[130, 90, 60, 110, 85, 60])
+        t = Table(table_data, colWidths=[120, 80, 55, 110, 100, 60])
         t.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#8B3A3A')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),

@@ -1,34 +1,49 @@
-import React, { useState } from 'react';
-import { Phone, Lock, User, Calendar, AlertCircle, CheckCircle2, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Phone, Mail, Lock, User, Calendar, AlertCircle, CheckCircle2, ArrowRight, Eye, EyeOff, KeyRound } from 'lucide-react';
 import { apiFetch } from '../api';
 
 export default function AuthModal({ onLoginSuccess }) {
-  const [isSignup, setIsSignup] = useState(false);
+  const [mode, setMode] = useState('login'); // 'login' | 'signup' | 'forgot' | 'reset'
 
   // Form states
-  const [phone, setPhone] = useState('9999999999');
+  const [identifier, setIdentifier] = useState('9999999999'); // Phone or Email for Login / Forgot
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('admin123');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState('');
   const [dob, setDob] = useState('');
+  const [resetToken, setResetToken] = useState('');
 
   // UI status states
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    // Check if URL has ?reset_token=...
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('reset_token');
+    if (token) {
+      setResetToken(token);
+      setMode('reset');
+      setInfo('Please enter a new password to complete your account recovery.');
+    }
+  }, []);
+
   const handlePhoneChange = (e) => {
-    // Only allow numeric digits and limit to max 10 characters
     const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 10);
     setPhone(digitsOnly);
   };
 
-  const validatePhone = () => {
-    if (!phone || phone.length !== 10) {
-      setError('Mobile phone number must be exactly 10 digits.');
-      return false;
-    }
-    return true;
+  const handleIdentifierChange = (e) => {
+    setIdentifier(e.target.value.trim());
+  };
+
+  const validateEmail = (val) => {
+    return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(val.trim());
   };
 
   const handleSubmit = async (e) => {
@@ -36,26 +51,73 @@ export default function AuthModal({ onLoginSuccess }) {
     setError('');
     setInfo('');
 
-    if (!validatePhone()) return;
+    if (mode === 'signup') {
+      if (!phone || phone.length !== 10) {
+        setError('Mobile phone number must be exactly 10 numeric digits.');
+        return;
+      }
+      if (!email || !validateEmail(email)) {
+        setError('Please enter a valid email address (e.g. name@domain.com).');
+        return;
+      }
+    }
+
+    if (mode === 'login') {
+      if (!identifier) {
+        setError('Please enter your 10-digit mobile number or email address.');
+        return;
+      }
+    }
+
+    if (mode === 'forgot') {
+      if (!identifier) {
+        setError('Please enter your registered email or mobile phone number.');
+        return;
+      }
+    }
+
+    if (mode === 'reset') {
+      if (!newPassword || newPassword.length < 6) {
+        setError('New password must be at least 6 characters long.');
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        setError('Passwords do not match. Please verify your new password.');
+        return;
+      }
+    }
 
     setLoading(true);
 
     try {
-      if (isSignup) {
-        // Sign up flow
+      if (mode === 'signup') {
         await apiFetch('/auth/signup', {
           method: 'POST',
-          body: JSON.stringify({ phone, name, dob, password }),
+          body: JSON.stringify({ phone, email, name, dob, password }),
         });
         setInfo('Account created successfully! Account status is "pending". Please wait for Admin approval before logging in.');
-        setIsSignup(false);
-      } else {
-        // Login flow
+        setMode('login');
+      } else if (mode === 'login') {
         const res = await apiFetch('/auth/login', {
           method: 'POST',
-          body: JSON.stringify({ phone, password }),
+          body: JSON.stringify({ identifier, password }),
         });
         onLoginSuccess(res.access_token, res.user);
+      } else if (mode === 'forgot') {
+        const res = await apiFetch('/auth/forgot-password', {
+          method: 'POST',
+          body: JSON.stringify({ identifier }),
+        });
+        setInfo(res.message);
+      } else if (mode === 'reset') {
+        const res = await apiFetch('/auth/reset-password', {
+          method: 'POST',
+          body: JSON.stringify({ token: resetToken, new_password: newPassword }),
+        });
+        setInfo(res.message);
+        setMode('login');
+        // Clear token from URL query params
+        window.history.replaceState({}, document.title, window.location.pathname);
       }
     } catch (err) {
       setError(err.message);
@@ -64,8 +126,8 @@ export default function AuthModal({ onLoginSuccess }) {
     }
   };
 
-  const handleQuickFill = (demoPhone, demoPass) => {
-    setPhone(demoPhone);
+  const handleQuickFill = (demoId, demoPass) => {
+    setIdentifier(demoId);
     setPassword(demoPass);
     setError('');
     setInfo('');
@@ -78,20 +140,23 @@ export default function AuthModal({ onLoginSuccess }) {
         {/* Header */}
         <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#FDFBF7] border border-[#EFE7DA] text-[#8B3A3A] mb-3">
-            <User className="w-6 h-6" />
+            {mode === 'reset' || mode === 'forgot' ? <KeyRound className="w-6 h-6" /> : <User className="w-6 h-6" />}
           </div>
           <h2 className="font-serif-accent text-2xl font-bold text-[#8B3A3A]">
-            {isSignup ? 'Create Member Account' : 'Member Login'}
+            {mode === 'signup' ? 'Create Member Account' :
+             mode === 'forgot' ? 'Reset Account Password' :
+             mode === 'reset' ? 'Set New Password' : 'Member Login'}
           </h2>
           <p className="text-xs text-[#3A322C]/70 mt-1">
-            {isSignup 
-              ? 'Register with your 10-digit mobile number to get started' 
-              : 'Sign in to access your attendance, streaks, & sabha portal'}
+            {mode === 'signup' ? 'Register with your email & 10-digit phone to get started' :
+             mode === 'forgot' ? 'Enter your registered email or phone to receive a 15-minute reset link' :
+             mode === 'reset' ? 'Create a new secure password for your account' :
+             'Sign in with your Phone Number or Email Address & Password'}
           </p>
         </div>
 
         {/* Quick Demo Fill Buttons */}
-        {!isSignup && (
+        {mode === 'login' && (
           <div className="mb-5 bg-[#FDFBF7] p-3 rounded-xl border border-[#EFE7DA]">
             <div className="text-[11px] font-semibold text-[#8B3A3A] uppercase tracking-wider mb-2">
               QUICK DEMO ACCOUNTS:
@@ -99,21 +164,21 @@ export default function AuthModal({ onLoginSuccess }) {
             <div className="grid grid-cols-3 gap-1.5">
               <button
                 type="button"
-                onClick={() => handleQuickFill('9999999999', 'admin123')}
+                onClick={() => handleQuickFill('admin@sabha.org', 'admin123')}
                 className="text-xs bg-white hover:bg-[#8B3A3A] hover:text-white text-[#8B3A3A] font-semibold py-1.5 px-2 rounded-lg border border-[#8B3A3A]/20 transition-all cursor-pointer text-center"
               >
                 Admin
               </button>
               <button
                 type="button"
-                onClick={() => handleQuickFill('8888888888', 'karyakar123')}
+                onClick={() => handleQuickFill('karyakar@sabha.org', 'karyakar123')}
                 className="text-xs bg-white hover:bg-[#E8A33D] hover:text-white text-[#E8A33D] font-semibold py-1.5 px-2 rounded-lg border border-[#E8A33D]/30 transition-all cursor-pointer text-center"
               >
                 Karyakar
               </button>
               <button
                 type="button"
-                onClick={() => handleQuickFill('7777777777', 'user123')}
+                onClick={() => handleQuickFill('user1@sabha.org', 'user123')}
                 className="text-xs bg-white hover:bg-[#5B8C5B] hover:text-white text-[#5B8C5B] font-semibold py-1.5 px-2 rounded-lg border border-[#5B8C5B]/30 transition-all cursor-pointer text-center"
               >
                 User
@@ -139,31 +204,69 @@ export default function AuthModal({ onLoginSuccess }) {
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           
-          {/* Phone input with strict 10 digit verification */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-semibold text-[#3A322C]">Mobile Phone Number</label>
-              <span className="text-[11px] font-medium text-[#3A322C]/60">
-                {phone.length}/10 digits
-              </span>
+          {/* LOGIN & FORGOT MODE: Identifier (Phone or Email) */}
+          {(mode === 'login' || mode === 'forgot') && (
+            <div>
+              <label className="block text-xs font-semibold text-[#3A322C] mb-1">
+                Mobile Phone Number or Email Address
+              </label>
+              <div className="relative">
+                {identifier.includes('@') ? (
+                  <Mail className="w-4 h-4 absolute left-3 top-3 text-[#3A322C]/40" />
+                ) : (
+                  <Phone className="w-4 h-4 absolute left-3 top-3 text-[#3A322C]/40" />
+                )}
+                <input
+                  type="text"
+                  required
+                  value={identifier}
+                  onChange={handleIdentifierChange}
+                  placeholder="e.g. 9999999999 or user@domain.com"
+                  className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-sm text-[#3A322C] focus:outline-none focus:border-[#E8A33D] transition-colors tracking-wide"
+                />
+              </div>
             </div>
-            <div className="relative">
-              <Phone className="w-4 h-4 absolute left-3 top-3 text-[#3A322C]/40" />
-              <input
-                type="tel"
-                required
-                maxLength={10}
-                value={phone}
-                onChange={handlePhoneChange}
-                placeholder="10-digit mobile number"
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-sm text-[#3A322C] focus:outline-none focus:border-[#E8A33D] transition-colors tracking-wide"
-              />
-            </div>
-          </div>
+          )}
 
-          {/* Signup specific fields */}
-          {isSignup && (
+          {/* SIGNUP MODE: Specific Phone and Email fields */}
+          {mode === 'signup' && (
             <>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-[#3A322C]">Mobile Phone Number</label>
+                  <span className="text-[11px] font-medium text-[#3A322C]/60">
+                    {phone.length}/10 digits
+                  </span>
+                </div>
+                <div className="relative">
+                  <Phone className="w-4 h-4 absolute left-3 top-3 text-[#3A322C]/40" />
+                  <input
+                    type="tel"
+                    required
+                    maxLength={10}
+                    value={phone}
+                    onChange={handlePhoneChange}
+                    placeholder="10-digit mobile number"
+                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-sm text-[#3A322C] focus:outline-none focus:border-[#E8A33D] transition-colors tracking-wide"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#3A322C] mb-1">Email Address</label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 absolute left-3 top-3 text-[#3A322C]/40" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="e.g. name@domain.com"
+                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-sm text-[#3A322C] focus:outline-none focus:border-[#E8A33D] transition-colors"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-[#3A322C] mb-1">Full Name</label>
                 <div className="relative">
@@ -194,31 +297,86 @@ export default function AuthModal({ onLoginSuccess }) {
             </>
           )}
 
-          {/* Password Field with Show/Hide Password Toggle */}
-          <div>
-            <label className="block text-xs font-semibold text-[#3A322C] mb-1">
-              {isSignup ? 'Create Password' : 'Password'}
-            </label>
-            <div className="relative">
-              <Lock className="w-4 h-4 absolute left-3 top-3 text-[#3A322C]/40" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-sm text-[#3A322C] focus:outline-none focus:border-[#E8A33D] transition-colors"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3 text-[#3A322C]/40 hover:text-[#8B3A3A] transition-colors cursor-pointer"
-                title={showPassword ? 'Hide Password' : 'Show Password'}
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
+          {/* LOGIN & SIGNUP MODE: Password Field */}
+          {(mode === 'login' || mode === 'signup') && (
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-[#3A322C]">
+                  {mode === 'signup' ? 'Create Password' : 'Password'}
+                </label>
+                {mode === 'login' && (
+                  <button
+                    type="button"
+                    onClick={() => { setMode('forgot'); setError(''); setInfo(''); }}
+                    className="text-[11px] font-semibold text-[#8B3A3A] hover:underline cursor-pointer"
+                  >
+                    Forgot Password?
+                  </button>
+                )}
+              </div>
+              <div className="relative">
+                <Lock className="w-4 h-4 absolute left-3 top-3 text-[#3A322C]/40" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-sm text-[#3A322C] focus:outline-none focus:border-[#E8A33D] transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3 text-[#3A322C]/40 hover:text-[#8B3A3A] transition-colors cursor-pointer"
+                  title={showPassword ? 'Hide Password' : 'Show Password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* RESET MODE: New Password & Confirm Password */}
+          {mode === 'reset' && (
+            <>
+              <div>
+                <label className="block text-xs font-semibold text-[#3A322C] mb-1">New Password</label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 absolute left-3 top-3 text-[#3A322C]/40" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Minimum 6 characters"
+                    className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-sm text-[#3A322C] focus:outline-none focus:border-[#E8A33D] transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3 text-[#3A322C]/40 hover:text-[#8B3A3A] transition-colors cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#3A322C] mb-1">Confirm New Password</label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 absolute left-3 top-3 text-[#3A322C]/40" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Re-enter new password"
+                    className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-sm text-[#3A322C] focus:outline-none focus:border-[#E8A33D] transition-colors"
+                  />
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Submit Button */}
           <button
@@ -226,25 +384,37 @@ export default function AuthModal({ onLoginSuccess }) {
             disabled={loading}
             className="w-full py-3 rounded-xl bg-[#E8A33D] hover:bg-[#D98A2B] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
           >
-            {loading ? 'Processing...' : (isSignup ? 'Submit Registration' : 'Log In to Portal')}
+            {loading ? 'Processing...' : (
+              mode === 'signup' ? 'Submit Registration' :
+              mode === 'forgot' ? 'Send Password Reset Email' :
+              mode === 'reset' ? 'Save New Password' : 'Log In to Portal'
+            )}
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
 
-        {/* Toggle Signup/Login */}
-        <div className="mt-5 text-center text-xs text-[#3A322C]/70">
-          {isSignup ? (
-            <span>Already have an account?{' '}
-              <button onClick={() => { setIsSignup(false); setError(''); setInfo(''); }} className="text-[#8B3A3A] font-semibold hover:underline cursor-pointer">
+        {/* Navigation Mode Switcher */}
+        <div className="mt-5 text-center text-xs text-[#3A322C]/70 space-y-1.5">
+          {mode === 'signup' && (
+            <div>Already have an account?{' '}
+              <button onClick={() => { setMode('login'); setError(''); setInfo(''); }} className="text-[#8B3A3A] font-semibold hover:underline cursor-pointer">
                 Log In
               </button>
-            </span>
-          ) : (
-            <span>New member?{' '}
-              <button onClick={() => { setIsSignup(true); setError(''); setInfo(''); }} className="text-[#8B3A3A] font-semibold hover:underline cursor-pointer">
+            </div>
+          )}
+          {mode === 'login' && (
+            <div>New member?{' '}
+              <button onClick={() => { setMode('signup'); setError(''); setInfo(''); }} className="text-[#8B3A3A] font-semibold hover:underline cursor-pointer">
                 Sign Up Now
               </button>
-            </span>
+            </div>
+          )}
+          {(mode === 'forgot' || mode === 'reset') && (
+            <div>Remembered your password?{' '}
+              <button onClick={() => { setMode('login'); setError(''); setInfo(''); }} className="text-[#8B3A3A] font-semibold hover:underline cursor-pointer">
+                Back to Log In
+              </button>
+            </div>
           )}
         </div>
 

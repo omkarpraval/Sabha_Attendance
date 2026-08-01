@@ -3,6 +3,10 @@ from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Tex
 from sqlalchemy.orm import relationship
 from app.database import Base
 
+class MemberCategory:
+    SATSANGI = "satsangi"
+    GOON_BHAVI = "goon_bhavi"
+
 class UserRole:
     ADMIN = "admin"
     KARYAKAR = "karyakar"
@@ -37,13 +41,16 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     phone = Column(String, unique=True, index=True, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=True)
     name = Column(String, nullable=False)
     dob = Column(String, nullable=True)
     hashed_password = Column(String, nullable=False)
     role = Column(String, default=UserRole.USER, nullable=False)
-    status = Column(String, default=UserStatus.PENDING, nullable=False)
+    status = Column(String, default=UserStatus.APPROVED, nullable=False)
+    member_category = Column(String, default=MemberCategory.SATSANGI, nullable=False)
     current_streak = Column(Integer, default=0)
     lifetime_count = Column(Integer, default=0)
+    reset_token_hash = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     # Relationships

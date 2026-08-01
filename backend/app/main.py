@@ -1,7 +1,21 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from app.database import engine, Base
 from app.routers import auth, users, venues, events, attendance, reports, notifications
+
+from app.config import settings
+
+# Ensure new columns exist in pre-existing PostgreSQL database tables
+if "postgresql" in settings.DATABASE_URL.lower():
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR;"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_hash VARCHAR;"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS member_category VARCHAR DEFAULT 'satsangi';"))
+            conn.commit()
+    except Exception as e:
+        pass
 
 # Create database tables
 Base.metadata.create_all(bind=engine)

@@ -14,6 +14,14 @@ class Settings(BaseSettings):
     VAPID_PRIVATE_KEY: str = "u8_81928391283912831293819238123"
     VAPID_CLAIMS_SUB: str = "mailto:admin@sabha.org"
 
+    # SMTP Email configuration (Zoho SMTP)
+    SMTP_HOST: str = "smtp.zoho.in"
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = "omkarpraval@zohomail.in"
+    SMTP_PASSWORD: str = "vmWcGaLrCySv"
+    EMAIL_FROM: str = "omkarpraval@zohomail.in"
+    SMTP_USE_TLS: bool = True
+
     class Config:
         env_file = ".env"
 

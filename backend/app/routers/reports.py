@@ -1,3 +1,4 @@
+from datetime import timedelta
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session, joinedload
@@ -50,6 +51,9 @@ def fetch_grouped_event_reports(
             else:
                 absent_count += 1
 
+            ist_ts = (r.timestamp_utc + timedelta(hours=5, minutes=30)) if r.timestamp_utc else None
+            ts_str = ist_ts.strftime("%I:%M %p IST") if ist_ts else "-"
+
             records.append({
                 "user_name": r.user.name if r.user else "Member",
                 "user_phone": r.user.phone if r.user else "N/A",
@@ -57,7 +61,7 @@ def fetch_grouped_event_reports(
                 "marked_by_name": marked_by,
                 "marking_method": r.marking_method.value if hasattr(r.marking_method, 'value') else str(r.marking_method),
                 "distance_meters": f"{r.distance_meters:.1f}" if r.distance_meters is not None else "N/A",
-                "timestamp_utc": r.timestamp_utc.strftime("%Y-%m-%d %H:%M UTC") if r.timestamp_utc else "N/A"
+                "timestamp_utc": ts_str
             })
 
         venue_name = ev.venue.name if ev.venue else "Central Sabha Mandir"

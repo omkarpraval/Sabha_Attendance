@@ -4,6 +4,7 @@ from typing import Optional
 from fastapi import Depends, HTTPException, status, Query, Request
 from fastapi.security import OAuth2PasswordBearer
 import jwt
+import bcrypt
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -13,12 +14,22 @@ from app.models import User, UserRole, UserStatus
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 def hash_password(password: str) -> str:
-    """Hashes a password using SHA-256 with secret salt for reliable lightweight hashing."""
-    salted = f"{settings.SECRET_KEY}:{password}"
-    return hashlib.sha256(salted.encode('utf-8')).hexdigest()
+    """Hashes a password using bcrypt salted hashing."""
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return hash_password(plain_password) == hashed_password
+    """Verifies a plain password against stored bcrypt hash with backwards compatibility for legacy sha256."""
+    if not hashed_password:
+        return False
+    # Check for legacy sha256 hash (64 hex characters)
+    if len(hashed_password) == 64 and not hashed_password.startswith("$2"):
+        legacy_hash = hashlib.sha256(f"{settings.SECRET_KEY}:{plain_password}".encode('utf-8')).hexdigest()
+        return legacy_hash == hashed_password
+    try:
+        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except Exception:
+        return False
 
 def create_access_token(data: dict, expires_delta: Optional[datetime.timedelta] = None) -> str:
     to_encode = data.copy()
