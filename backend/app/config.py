@@ -5,8 +5,8 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Sabha Attendance Management System"
     SECRET_KEY: str = "sabha_secret_key_2026_super_secure_jwt_token_key_change_in_prod"
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days for ease of testing
-    REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 30  # 30 days
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 365  # 1 Year persistent login until explicit logout
+    REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 365  # 1 Year
     DATABASE_URL: str = "sqlite:///./sabha_attendance.db"
     
     # VAPID keys for Web Push Notifications

@@ -142,7 +142,9 @@ class VenueResponse(BaseModel):
 # Event Schemas
 class EventCreate(BaseModel):
     title: str
+    event_type: str = "one_time"  # "recurring" or "one_time"
     event_date: str  # YYYY-MM-DD
+    day_of_week: Optional[str] = None  # monday, tuesday, etc.
     start_time: str  # HH:MM
     end_time: str    # HH:MM
     venue_id: int

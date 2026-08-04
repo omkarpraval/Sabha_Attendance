@@ -30,6 +30,8 @@ export default function AuthModal({ onLoginSuccess }) {
       setResetToken(token);
       setMode('reset');
       setInfo('Please enter a new password to complete your account recovery.');
+    } else if (sessionStorage.getItem('pending_qr_ref')) {
+      setInfo('📷 You scanned a Sabha Mandir QR poster! Please log in or sign up below to mark your attendance automatically.');
     }
   }, []);
 

@@ -20,6 +20,22 @@ def get_current_ist_time():
     ist_now = utc_now + datetime.timedelta(hours=5, minutes=30)
     return ist_now
 
+def extract_clean_qr_ref(ref_input: str) -> str:
+    """Extracts clean QR reference string if input is a full web URL or raw text."""
+    if not ref_input:
+        return ""
+    ref_input = ref_input.strip()
+    if "qr_ref=" in ref_input:
+        try:
+            from urllib.parse import parse_qs, urlparse
+            parsed = urlparse(ref_input)
+            params = parse_qs(parsed.query)
+            if "qr_ref" in params and params["qr_ref"]:
+                return params["qr_ref"][0]
+        except Exception:
+            pass
+    return ref_input
+
 @router.post("/scan", response_model=AttendanceResponse)
 def scan_and_mark_attendance(
     req: ScanAttendanceRequest,
@@ -29,15 +45,17 @@ def scan_and_mark_attendance(
     """
     Core self-attendance marking via QR scan + Geofence radius check + Time window check.
     """
+    clean_ref = extract_clean_qr_ref(req.qr_code_reference)
+
     # 1. Resolve QR code reference to an active event
     event = db.query(Event).filter(
-        Event.qr_code_reference == req.qr_code_reference,
+        Event.qr_code_reference == clean_ref,
         Event.status == EventStatus.OPEN
     ).first()
 
     # If reusable QR, look up active event linked to venue
     if not event:
-        venue = db.query(Venue).filter(Venue.qr_code_reference == req.qr_code_reference).first()
+        venue = db.query(Venue).filter(Venue.qr_code_reference == clean_ref).first()
         if venue:
             event = db.query(Event).filter(
                 Event.venue_id == venue.id,
@@ -158,6 +176,16 @@ def manual_mark_attendance(
     event = db.query(Event).filter(Event.id == req.event_id).first()
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
+
+    ist_now = get_current_ist_time()
+    today_str = ist_now.strftime("%Y-%m-%d")
+    current_time_str = ist_now.strftime("%H:%M")
+
+    if event.status == EventStatus.CLOSED or event.event_date < today_str or (event.event_date == today_str and current_time_str >= event.end_time):
+        raise HTTPException(status_code=400, detail="Attendance for this event is closed.")
+
+    if event.event_date > today_str or (event.event_date == today_str and current_time_str < event.start_time):
+        raise HTTPException(status_code=400, detail=f"Attendance for this sabha cannot be marked before the start time ({event.start_time} IST).")
     
     target_user = db.query(User).filter(User.id == req.user_id).first()
     if not target_user:

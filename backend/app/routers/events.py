@@ -14,19 +14,72 @@ from app.utils.reports import generate_qr_poster_pdf
 
 router = APIRouter(prefix="/api/events", tags=["Events"])
 
-def calculate_next_saturdays(count: int) -> List[str]:
-    """Helper to compute dates for N upcoming Saturdays starting from today."""
-    saturdays = []
-    today = datetime.date.today()
-    days_ahead = (5 - today.weekday()) % 7
-    if days_ahead == 0 and datetime.datetime.now().hour > 22:
-        days_ahead += 7
-    
-    current_sat = today + datetime.timedelta(days=days_ahead)
+DAY_NAME_TO_WEEKDAY = {
+    "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
+    "friday": 4, "saturday": 5, "sunday": 6
+}
+
+def calculate_recurring_dates(start_date_str: str, day_of_week: Optional[str], count: int) -> List[str]:
+    """Helper to compute dates for N upcoming recurring days of week."""
+    dates = []
+    try:
+        start_dt = datetime.datetime.strptime(start_date_str, "%Y-%m-%d").date()
+    except Exception:
+        start_dt = datetime.date.today()
+
+    target_weekday = DAY_NAME_TO_WEEKDAY.get((day_of_week or "").strip().lower())
+    if target_weekday is None:
+        target_weekday = start_dt.weekday()
+
+    days_ahead = (target_weekday - start_dt.weekday()) % 7
+    current_date = start_dt + datetime.timedelta(days=days_ahead)
+
     for _ in range(count):
-        saturdays.append(current_sat.strftime("%Y-%m-%d"))
-        current_sat += datetime.timedelta(days=7)
-    return saturdays
+        dates.append(current_date.strftime("%Y-%m-%d"))
+        current_date += datetime.timedelta(days=7)
+    return dates
+
+def close_single_event_logic(ev: Event, db: Session):
+    """Closes an event and marks all un-marked approved users as AUTO_ABSENT."""
+    if ev.status == EventStatus.CLOSED:
+        return
+    ev.status = EventStatus.CLOSED
+
+    approved_users = db.query(User).filter(User.status == UserStatus.APPROVED).all()
+    existing_records = {att.user_id: att for att in ev.attendances}
+
+    for user in approved_users:
+        if user.id in existing_records:
+            record = existing_records[user.id]
+            if record.status in [AttendanceStatus.ABSENT, AttendanceStatus.EXCUSED]:
+                user.current_streak = 0
+        else:
+            absent_record = Attendance(
+                event_id=ev.id,
+                user_id=user.id,
+                status=AttendanceStatus.ABSENT,
+                marked_by_id=None,
+                marking_method=MarkingMethod.AUTO_ABSENT,
+                timestamp_utc=datetime.datetime.utcnow()
+            )
+            db.add(absent_record)
+            user.current_streak = 0
+
+    db.commit()
+    db.refresh(ev)
+
+def auto_close_expired_events(db: Session):
+    """Automatically closes open events whose end_time (IST) has passed."""
+    utc_now = datetime.datetime.utcnow()
+    ist_now = utc_now + datetime.timedelta(hours=5, minutes=30)
+    today_str = ist_now.strftime("%Y-%m-%d")
+    time_str = ist_now.strftime("%H:%M")
+
+    open_events = db.query(Event).filter(Event.status == EventStatus.OPEN).all()
+    for ev in open_events:
+        # Close if event date is in the past OR if today and end_time has passed
+        if ev.event_date < today_str or (ev.event_date == today_str and ev.end_time <= time_str):
+            close_single_event_logic(ev, db)
 
 @router.get("", response_model=List[EventResponse])
 def list_events(
@@ -34,6 +87,9 @@ def list_events(
     current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    # Auto-close any expired open events first
+    auto_close_expired_events(db)
+
     query = db.query(Event)
     if status_filter:
         query = query.filter(Event.status == status_filter)
@@ -42,6 +98,7 @@ def list_events(
     utc_now = datetime.datetime.utcnow()
     ist_now = utc_now + datetime.timedelta(hours=5, minutes=30)
     today_str = ist_now.strftime("%Y-%m-%d")
+    time_str = ist_now.strftime("%H:%M")
 
     today_events = [e for e in all_events if e.event_date == today_str]
     upcoming_events = sorted([e for e in all_events if e.event_date > today_str], key=lambda x: (x.event_date, x.start_time))
@@ -52,6 +109,15 @@ def list_events(
     response = []
     for ev in sorted_events:
         resp = EventResponse.from_orm(ev)
+        if ev.status == EventStatus.CLOSED:
+            resp.status = "closed"
+        elif ev.event_date > today_str or (ev.event_date == today_str and time_str < ev.start_time):
+            resp.status = "upcoming"
+        elif ev.event_date < today_str or (ev.event_date == today_str and time_str >= ev.end_time):
+            resp.status = "closed"
+        else:
+            resp.status = "open"
+
         if ev.venue:
             resp.venue_name = ev.venue.name
             resp.venue_latitude = ev.venue.latitude
@@ -66,10 +132,26 @@ def get_event(
     current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    auto_close_expired_events(db)
     ev = db.query(Event).filter(Event.id == event_id).first()
     if not ev:
         raise HTTPException(status_code=404, detail="Event not found")
     resp = EventResponse.from_orm(ev)
+
+    utc_now = datetime.datetime.utcnow()
+    ist_now = utc_now + datetime.timedelta(hours=5, minutes=30)
+    today_str = ist_now.strftime("%Y-%m-%d")
+    time_str = ist_now.strftime("%H:%M")
+
+    if ev.status == EventStatus.CLOSED:
+        resp.status = "closed"
+    elif ev.event_date > today_str or (ev.event_date == today_str and time_str < ev.start_time):
+        resp.status = "upcoming"
+    elif ev.event_date < today_str or (ev.event_date == today_str and time_str >= ev.end_time):
+        resp.status = "closed"
+    else:
+        resp.status = "open"
+
     if ev.venue:
         resp.venue_name = ev.venue.name
         resp.venue_latitude = ev.venue.latitude
@@ -87,17 +169,22 @@ def create_events(
     if not venue:
         raise HTTPException(status_code=404, detail="Venue not found")
 
-    dates = [req.event_date]
-    if req.is_recurring_saturday:
-        dates = calculate_next_saturdays(req.recurring_weeks)
+    is_recurring = (req.event_type == "recurring" or req.is_recurring_saturday)
 
-    created_events = []
-    for d in dates:
+    if is_recurring:
+        day_name = (req.day_of_week or "saturday").strip().lower()
+        dates = calculate_recurring_dates(req.event_date, day_name, req.recurring_weeks)
+        # Consistent permanent QR code reference for all recurring weekly sessions of this day & venue
+        qr_ref = f"recurring_venue_{venue.id}_{day_name}"
+    else:
+        dates = [req.event_date]
         if req.qr_mode == QRMode.REUSABLE:
             qr_ref = venue.qr_code_reference
         else:
             qr_ref = f"event_{uuid.uuid4().hex[:12]}"
 
+    created_events = []
+    for d in dates:
         ev = Event(
             title=req.title,
             event_date=d,
@@ -188,30 +275,7 @@ def close_event(
     if not ev:
         raise HTTPException(status_code=404, detail="Event not found")
 
-    ev.status = EventStatus.CLOSED
-
-    approved_users = db.query(User).filter(User.status == UserStatus.APPROVED).all()
-    existing_records = {att.user_id: att for att in ev.attendances}
-
-    for user in approved_users:
-        if user.id in existing_records:
-            record = existing_records[user.id]
-            if record.status in [AttendanceStatus.ABSENT, AttendanceStatus.EXCUSED]:
-                user.current_streak = 0
-        else:
-            absent_record = Attendance(
-                event_id=ev.id,
-                user_id=user.id,
-                status=AttendanceStatus.ABSENT,
-                marked_by_id=None,
-                marking_method=MarkingMethod.AUTO_ABSENT,
-                timestamp_utc=datetime.datetime.utcnow()
-            )
-            db.add(absent_record)
-            user.current_streak = 0
-
-    db.commit()
-    db.refresh(ev)
+    close_single_event_logic(ev, db)
 
     resp = EventResponse.from_orm(ev)
     if ev.venue:

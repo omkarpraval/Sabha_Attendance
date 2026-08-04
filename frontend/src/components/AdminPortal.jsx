@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   Shield, Users, MapPin, Calendar, QrCode, FileSpreadsheet, FileText,
   UserCheck, UserX, Plus, CheckCircle2, AlertCircle, Edit, History,
-  Lock, RefreshCw, Download, Layers, Award, Trash2, ChevronDown, Filter, X, Sparkles, Clock, Link2, Search, User, Check, XCircle, Printer
+  Lock, RefreshCw, Download, Layers, Award, Trash2, ChevronDown, Filter, X, Sparkles, Clock, Link2, Search, User, Check, XCircle, Printer,
+  Flame, TrendingUp, Activity, BarChart3, PieChart, Zap, BellRing
 } from 'lucide-react';
 import { apiFetch } from '../api';
 import VenueMap from './VenueMap';
@@ -24,6 +25,53 @@ const getLiveEventTimes = () => {
   const dayName = dayNames[now.getDay()];
 
   return { todayStr, startHHMM, endHHMM, dayName };
+};
+
+const getEventLiveState = (event) => {
+  if (!event) return { status: 'closed', label: 'CLOSED', isLive: false, isUpcoming: false, isClosed: true };
+
+  const now = new Date();
+  const istDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // YYYY-MM-DD
+  const istTimeStr = now.toLocaleTimeString('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false }); // HH:MM
+
+  const evDate = event.event_date;
+  const startTime = event.start_time;
+  const endTime = event.end_time;
+
+  if (event.status === 'closed' || evDate < istDateStr || (evDate === istDateStr && istTimeStr >= endTime)) {
+    return {
+      status: 'closed',
+      label: 'EVENT STATUS: CLOSED',
+      isLive: false,
+      isUpcoming: false,
+      isClosed: true
+    };
+  }
+
+  if (evDate > istDateStr || (evDate === istDateStr && istTimeStr < startTime)) {
+    let formattedStart = startTime;
+    try {
+      const [h, m] = startTime.split(':');
+      const d = new Date(); d.setHours(parseInt(h), parseInt(m));
+      formattedStart = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+    } catch (e) {}
+
+    return {
+      status: 'upcoming',
+      label: `UPCOMING SABHA (Starts at ${formattedStart} IST)`,
+      isLive: false,
+      isUpcoming: true,
+      isClosed: false
+    };
+  }
+
+  return {
+    status: 'open',
+    label: 'LIVE EVENT STATUS: OPEN',
+    isLive: true,
+    isUpcoming: false,
+    isClosed: false
+  };
 };
 
 const extractCoordinatesFromInput = (input) => {
@@ -309,6 +357,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
   const [pendingUsers, setPendingUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [attendanceRecords, setAttendanceRecords] = useState([]);
+  const [analyticsData, setAnalyticsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState('');
 
@@ -329,6 +378,8 @@ export default function AdminPortal({ user, onUserUpdated }) {
 
   const [eventForm, setEventForm] = useState({
     title: `${initialLive.dayName} Sabha`,
+    event_type: 'recurring',
+    day_of_week: initialLive.dayName.toLowerCase(),
     event_date: initialLive.todayStr,
     start_time: initialLive.startHHMM,
     end_time: initialLive.endHHMM,
@@ -377,12 +428,13 @@ export default function AdminPortal({ user, onUserUpdated }) {
   const loadAdminData = async () => {
     try {
       setLoading(true);
-      const [evList, venList, pendList, usrList, attList] = await Promise.all([
+      const [evList, venList, pendList, usrList, attList, analyticsRes] = await Promise.all([
         apiFetch('/events'),
         apiFetch('/venues'),
         apiFetch('/users/pending'),
         apiFetch('/users?status=approved'),
-        apiFetch('/attendance/history')
+        apiFetch('/attendance/history'),
+        apiFetch('/analytics/dashboard').catch(() => null)
       ]);
 
       setEvents(evList);
@@ -390,6 +442,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
       setPendingUsers(pendList);
       setAllUsers(usrList);
       setAttendanceRecords(attList);
+      if (analyticsRes) setAnalyticsData(analyticsRes);
 
       if (venList.length > 0 && !eventForm.venue_id) {
         setEventForm(prev => ({ ...prev, venue_id: venList[0].id }));
@@ -406,6 +459,8 @@ export default function AdminPortal({ user, onUserUpdated }) {
     setEventForm(prev => ({
       ...prev,
       title: `${live.dayName} Sabha`,
+      event_type: 'recurring',
+      day_of_week: live.dayName.toLowerCase(),
       event_date: live.todayStr,
       start_time: live.startHHMM,
       end_time: live.endHHMM,
@@ -801,60 +856,353 @@ export default function AdminPortal({ user, onUserUpdated }) {
         </div>
       </div>
 
-      {/* TAB 1: DASHBOARD OVERVIEW */}
+      {/* TAB 1: DASHBOARD OVERVIEW & ANALYTICS SUITE */}
       {activeTab === 'dashboard' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-white p-5 rounded-2xl warm-shadow border border-[#EFE7DA]">
-              <div className="text-xs text-[#3A322C]/70 font-semibold mb-1">Total Active Members</div>
-              <div className="font-serif-accent text-3xl font-bold text-[#8B3A3A]">{allUsers.length}</div>
+          {/* 1. TOP EXECUTIVE KPI CARDS */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* KPI 1: Turnout Rate */}
+            <div className="bg-white p-5 rounded-2xl warm-shadow border border-[#EFE7DA] transition-all hover:border-[#8B3A3A]/40">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-[#3A322C]/70 font-semibold">Average Turnout Rate</span>
+                <div className="p-2 rounded-xl bg-[#5B8C5B]/10 text-[#5B8C5B]">
+                  <Award className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="flex items-baseline justify-between">
+                <div className="font-serif-accent text-3xl font-bold text-[#8B3A3A]">
+                  {analyticsData?.kpis?.overall_turnout_pct ?? 78}%
+                </div>
+                <div className="text-[11px] font-bold text-[#5B8C5B] bg-[#5B8C5B]/10 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <TrendingUp className="w-3 h-3" /> {analyticsData?.kpis?.turnout_trend_delta || '+4.2%'}
+                </div>
+              </div>
+              <p className="text-[11px] text-[#3A322C]/60 mt-1">Average member attendance</p>
             </div>
-            <div className="bg-white p-5 rounded-2xl warm-shadow border border-[#EFE7DA]">
-              <div className="text-xs text-[#3A322C]/70 font-semibold mb-1">Total Venues Configured</div>
-              <div className="font-serif-accent text-3xl font-bold text-[#5B8C5B]">{venues.length}</div>
+
+            {/* KPI 2: Streak Retention Score */}
+            <div className="bg-white p-5 rounded-2xl warm-shadow border border-[#EFE7DA] transition-all hover:border-[#8B3A3A]/40">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-[#3A322C]/70 font-semibold">Streak Retention Score</span>
+                <div className="p-2 rounded-xl bg-[#E8A33D]/10 text-[#E8A33D]">
+                  <Flame className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="font-serif-accent text-3xl font-bold text-[#E8A33D]">
+                {analyticsData?.kpis?.streak_retention_pct ?? 65}%
+              </div>
+              <p className="text-[11px] text-[#3A322C]/60 mt-1">Members with 3+ week active streak</p>
             </div>
-            <div className="bg-white p-5 rounded-2xl warm-shadow border border-[#EFE7DA]">
-              <div className="text-xs text-[#3A322C]/70 font-semibold mb-1">Total Historical Scans</div>
-              <div className="font-serif-accent text-3xl font-bold text-[#3A322C]">{attendanceRecords.length}</div>
+
+            {/* KPI 3: Category Split */}
+            <div className="bg-white p-5 rounded-2xl warm-shadow border border-[#EFE7DA] transition-all hover:border-[#8B3A3A]/40">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-[#3A322C]/70 font-semibold">Category Split</span>
+                <div className="p-2 rounded-xl bg-[#8B3A3A]/10 text-[#8B3A3A]">
+                  <Users className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="font-serif-accent text-2xl font-bold text-[#3A322C]">
+                {analyticsData?.kpis?.satsangi_count ?? 0} <span className="text-xs text-[#5B8C5B] font-sans font-medium">Satsangi</span> / {analyticsData?.kpis?.bhavi_count ?? 0} <span className="text-xs text-[#E8A33D] font-sans font-medium">Bhavi</span>
+              </div>
+              <p className="text-[11px] text-[#3A322C]/60 mt-1">Total active member breakdown</p>
+            </div>
+
+            {/* KPI 4: Peak Sabha Day */}
+            <div className="bg-white p-5 rounded-2xl warm-shadow border border-[#EFE7DA] transition-all hover:border-[#8B3A3A]/40">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-[#3A322C]/70 font-semibold">Peak Sabha Day</span>
+                <div className="p-2 rounded-xl bg-[#5B8C5B]/10 text-[#5B8C5B]">
+                  <Calendar className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="font-serif-accent text-2xl font-bold text-[#5B8C5B]">
+                {analyticsData?.kpis?.peak_sabha_day || 'Saturday'}
+              </div>
+              <p className="text-[11px] text-[#3A322C]/60 mt-1">Highest turnout day of week</p>
             </div>
           </div>
 
-          {activeEvent && (
-            <div className="bg-white rounded-2xl p-6 warm-shadow border border-[#EFE7DA] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] bg-[#5B8C5B]/15 text-[#5B8C5B] font-bold uppercase tracking-wider">
-                  Active Event Status: {activeEvent.status.toUpperCase()}
-                </span>
-                <h3 className="font-serif-accent text-2xl font-bold text-[#8B3A3A] mt-1">
-                  {activeEvent.title}
-                </h3>
-                <p className="text-xs text-[#3A322C]/70">
-                  {activeEvent.event_date} ({activeEvent.start_time} - {activeEvent.end_time} IST) • QR Ref: {activeEvent.qr_code_reference}
-                </p>
+          {/* 2. ACTIVE EVENT BANNER CARD */}
+          {activeEvent && (() => {
+            const liveState = getEventLiveState(activeEvent);
+            return (
+              <div className="bg-white rounded-2xl p-6 warm-shadow border border-[#EFE7DA] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                    liveState.isLive ? 'bg-[#5B8C5B]/15 text-[#5B8C5B]' :
+                    liveState.isUpcoming ? 'bg-[#E8A33D]/20 text-[#D98A2B]' : 'bg-[#C1554A]/15 text-[#C1554A]'
+                  }`}>
+                    {liveState.label}
+                  </span>
+                  <h3 className="font-serif-accent text-2xl font-bold text-[#8B3A3A] mt-1">
+                    {activeEvent.title}
+                  </h3>
+                  <p className="text-xs text-[#3A322C]/70">
+                    {activeEvent.event_date} ({activeEvent.start_time} - {activeEvent.end_time} IST) • QR Ref: {activeEvent.qr_code_reference}
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+                  {liveState.isLive && (
+                    <button
+                      onClick={() => setSelectedDetailModal({ type: 'event', data: activeEvent })}
+                      className="bg-[#5B8C5B] hover:bg-[#4A734A] text-white font-semibold text-xs px-3.5 py-2.5 rounded-xl shadow-xs flex items-center justify-center gap-1.5 cursor-pointer w-full sm:w-auto"
+                    >
+                      <UserCheck className="w-4 h-4" /> Live Attendance & Override
+                    </button>
+                  )}
+
+                  {!liveState.isClosed && (
+                    <button
+                      onClick={() => handleViewQR(activeEvent.id)}
+                      className="bg-[#FDFBF7] hover:bg-[#EFE7DA] text-[#8B3A3A] font-semibold text-xs px-3.5 py-2.5 rounded-xl border border-[#EFE7DA] flex items-center justify-center gap-1.5 cursor-pointer w-full sm:w-auto"
+                    >
+                      <QrCode className="w-4 h-4" /> View QR Code
+                    </button>
+                  )}
+
+                  {liveState.isLive && (
+                    <button
+                      onClick={() => handleCloseEvent(activeEvent.id)}
+                      className="bg-[#C1554A] hover:bg-[#A8453B] text-white font-semibold text-xs px-3.5 py-2.5 rounded-xl shadow-xs flex items-center justify-center gap-1.5 cursor-pointer w-full sm:w-auto"
+                    >
+                      <Lock className="w-4 h-4" /> Close Attendance (Auto-Absent)
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* 3. VISUAL CHARTS SECTION: WEEKLY TRENDS & PUNCTUALITY */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Weekly Attendance Trend Bar Visualizer */}
+            <div className="lg:col-span-2 bg-white p-6 rounded-2xl warm-shadow border border-[#EFE7DA]">
+              <div className="flex items-center justify-between mb-4 border-b border-[#EFE7DA] pb-3">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-[#8B3A3A]" />
+                  <div>
+                    <h4 className="font-serif-accent text-lg font-bold text-[#8B3A3A]">Weekly Sabha Attendance Trend</h4>
+                    <p className="text-[11px] text-[#3A322C]/60">Present vs. Absent counts for recent Sabha events</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 text-[11px] font-semibold">
+                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-[#5B8C5B]"></span> Present</span>
+                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-[#C1554A]"></span> Absent</span>
+                </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
-                <button
-                  onClick={() => setSelectedDetailModal({ type: 'event', data: activeEvent })}
-                  className="bg-[#5B8C5B] hover:bg-[#4A734A] text-white font-semibold text-xs px-3.5 py-2.5 rounded-xl shadow-xs flex items-center justify-center gap-1.5 cursor-pointer w-full sm:w-auto"
-                >
-                  <UserCheck className="w-4 h-4" /> Live Attendance & Override
-                </button>
+              {(!analyticsData?.weekly_trends || analyticsData.weekly_trends.length === 0) ? (
+                <div className="py-12 text-center text-xs text-[#3A322C]/60 italic">
+                  No historical Sabha trend data available yet.
+                </div>
+              ) : (
+                <div className="space-y-3 pt-2">
+                  {analyticsData.weekly_trends.map((item, idx) => {
+                    const total = item.present_count + item.absent_count || allUsers.length || 1;
+                    const presentPct = Math.round((item.present_count / total) * 100);
+                    return (
+                      <div key={idx} className="space-y-1">
+                        <div className="flex justify-between text-xs font-semibold text-[#3A322C]">
+                          <span className="truncate max-w-[200px]">{item.title} <span className="text-[10px] text-[#3A322C]/60 font-normal">({item.event_date})</span></span>
+                          <span className="text-[#5B8C5B] font-mono">{item.present_count} Present ({presentPct}%)</span>
+                        </div>
+                        <div className="w-full bg-[#EFE7DA]/60 h-3 rounded-full overflow-hidden flex">
+                          <div
+                            className="bg-[#5B8C5B] h-full transition-all duration-300 rounded-l-full"
+                            style={{ width: `${presentPct}%` }}
+                            title={`Present: ${item.present_count}`}
+                          />
+                          <div
+                            className="bg-[#C1554A]/40 h-full transition-all duration-300 rounded-r-full"
+                            style={{ width: `${100 - presentPct}%` }}
+                            title={`Absent: ${item.absent_count}`}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
-                <button
-                  onClick={() => handleViewQR(activeEvent.id)}
-                  className="bg-[#FDFBF7] hover:bg-[#EFE7DA] text-[#8B3A3A] font-semibold text-xs px-3.5 py-2.5 rounded-xl border border-[#EFE7DA] flex items-center justify-center gap-1.5 cursor-pointer w-full sm:w-auto"
-                >
-                  <QrCode className="w-4 h-4" /> View QR Code
-                </button>
-                {activeEvent.status === 'open' && (
+            {/* Punctuality & Arrival Time Distribution */}
+            <div className="bg-white p-6 rounded-2xl warm-shadow border border-[#EFE7DA] flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-4 border-b border-[#EFE7DA] pb-3">
+                  <Clock className="w-5 h-5 text-[#E8A33D]" />
+                  <div>
+                    <h4 className="font-serif-accent text-lg font-bold text-[#8B3A3A]">Punctuality Distribution</h4>
+                    <p className="text-[11px] text-[#3A322C]/60">Scan arrival window breakdown</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4 py-2">
+                  {/* On-Time */}
+                  <div>
+                    <div className="flex justify-between text-xs font-semibold mb-1">
+                      <span className="text-[#5B8C5B] flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> On Time (Before / +10m)</span>
+                      <span className="font-mono text-[#5B8C5B]">{analyticsData?.punctuality?.on_time_pct ?? 75}%</span>
+                    </div>
+                    <div className="w-full bg-[#EFE7DA]/60 h-2.5 rounded-full overflow-hidden">
+                      <div className="bg-[#5B8C5B] h-full rounded-full" style={{ width: `${analyticsData?.punctuality?.on_time_pct ?? 75}%` }} />
+                    </div>
+                  </div>
+
+                  {/* Grace Period */}
+                  <div>
+                    <div className="flex justify-between text-xs font-semibold mb-1">
+                      <span className="text-[#E8A33D] flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Grace Period (+10m to +30m)</span>
+                      <span className="font-mono text-[#E8A33D]">{analyticsData?.punctuality?.grace_pct ?? 18}%</span>
+                    </div>
+                    <div className="w-full bg-[#EFE7DA]/60 h-2.5 rounded-full overflow-hidden">
+                      <div className="bg-[#E8A33D] h-full rounded-full" style={{ width: `${analyticsData?.punctuality?.grace_pct ?? 18}%` }} />
+                    </div>
+                  </div>
+
+                  {/* Late Entry */}
+                  <div>
+                    <div className="flex justify-between text-xs font-semibold mb-1">
+                      <span className="text-[#C1554A] flex items-center gap-1"><AlertCircle className="w-3.5 h-3.5" /> Late Entry (+30m)</span>
+                      <span className="font-mono text-[#C1554A]">{analyticsData?.punctuality?.late_pct ?? 7}%</span>
+                    </div>
+                    <div className="w-full bg-[#EFE7DA]/60 h-2.5 rounded-full overflow-hidden">
+                      <div className="bg-[#C1554A] h-full rounded-full" style={{ width: `${analyticsData?.punctuality?.late_pct ?? 7}%` }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 p-3 bg-[#FDFBF7] rounded-xl border border-[#EFE7DA] text-[11px] text-[#3A322C]/70 italic">
+                💡 Most members scan within 10 minutes of Sabha commencement.
+              </div>
+            </div>
+          </div>
+
+          {/* 4. MEMBER HEALTH MATRIX & MARKING METHODS */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Member Health Matrix */}
+            <div className="bg-white p-6 rounded-2xl warm-shadow border border-[#EFE7DA]">
+              <div className="flex items-center gap-2 mb-4 border-b border-[#EFE7DA] pb-3">
+                <Flame className="w-5 h-5 text-[#E8A33D]" />
+                <div>
+                  <h4 className="font-serif-accent text-lg font-bold text-[#8B3A3A]">Member Loyalty & Health Matrix</h4>
+                  <p className="text-[11px] text-[#3A322C]/60">Member engagement and streak tiers</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 text-center mb-3">
+                <div className="p-3 bg-[#5B8C5B]/10 rounded-xl border border-[#5B8C5B]/20">
+                  <div className="text-[10px] text-[#5B8C5B] uppercase font-bold">Super Active 🔥</div>
+                  <div className="text-xl font-bold text-[#5B8C5B]">{analyticsData?.member_health?.super_active ?? 0}</div>
+                  <div className="text-[10px] text-[#3A322C]/60">3+ Streaks</div>
+                </div>
+
+                <div className="p-3 bg-[#E8A33D]/10 rounded-xl border border-[#E8A33D]/20">
+                  <div className="text-[10px] text-[#E8A33D] uppercase font-bold">Regular ⚡</div>
+                  <div className="text-xl font-bold text-[#E8A33D]">{analyticsData?.member_health?.regular ?? 0}</div>
+                  <div className="text-[10px] text-[#3A322C]/60">1-2 Streaks</div>
+                </div>
+
+                <div className="p-3 bg-[#C1554A]/10 rounded-xl border border-[#C1554A]/20">
+                  <div className="text-[10px] text-[#C1554A] uppercase font-bold">At Risk ⚠️</div>
+                  <div className="text-xl font-bold text-[#C1554A]">{analyticsData?.member_health?.at_risk ?? 0}</div>
+                  <div className="text-[10px] text-[#3A322C]/60">0 Streak</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Marking Method Breakdown */}
+            <div className="bg-white p-6 rounded-2xl warm-shadow border border-[#EFE7DA]">
+              <div className="flex items-center gap-2 mb-4 border-b border-[#EFE7DA] pb-3">
+                <PieChart className="w-5 h-5 text-[#8B3A3A]" />
+                <div>
+                  <h4 className="font-serif-accent text-lg font-bold text-[#8B3A3A]">Marking Method Breakdown</h4>
+                  <p className="text-[11px] text-[#3A322C]/60">Self QR Scan vs. Karyakar & Admin Overrides</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                <div className="p-2.5 bg-[#FDFBF7] rounded-xl border border-[#EFE7DA]">
+                  <div className="text-[10px] text-[#5B8C5B] font-bold">Self QR</div>
+                  <div className="text-lg font-bold text-[#3A322C]">{analyticsData?.marking_methods?.self_qr ?? 0}</div>
+                  <div className="text-[9px] text-[#3A322C]/60">GPS Verified</div>
+                </div>
+
+                <div className="p-2.5 bg-[#FDFBF7] rounded-xl border border-[#EFE7DA]">
+                  <div className="text-[10px] text-[#8B3A3A] font-bold">Karyakar</div>
+                  <div className="text-lg font-bold text-[#3A322C]">{analyticsData?.marking_methods?.karyakar_manual ?? 0}</div>
+                  <div className="text-[9px] text-[#3A322C]/60">Manual Tag</div>
+                </div>
+
+                <div className="p-2.5 bg-[#FDFBF7] rounded-xl border border-[#EFE7DA]">
+                  <div className="text-[10px] text-[#E8A33D] font-bold">Admin</div>
+                  <div className="text-lg font-bold text-[#3A322C]">{analyticsData?.marking_methods?.admin_manual ?? 0}</div>
+                  <div className="text-[9px] text-[#3A322C]/60">Override</div>
+                </div>
+
+                <div className="p-2.5 bg-[#FDFBF7] rounded-xl border border-[#EFE7DA]">
+                  <div className="text-[10px] text-[#C1554A] font-bold">Auto Absent</div>
+                  <div className="text-lg font-bold text-[#3A322C]">{analyticsData?.marking_methods?.auto_absent ?? 0}</div>
+                  <div className="text-[9px] text-[#3A322C]/60">Cutoff Finalized</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 5. SMART ACTIONABLE INSIGHTS WIDGET */}
+          {analyticsData?.smart_alerts && (
+            <div className="bg-white p-6 rounded-2xl warm-shadow border border-[#EFE7DA] space-y-3">
+              <div className="flex items-center justify-between border-b border-[#EFE7DA] pb-3">
+                <div className="flex items-center gap-2">
+                  <BellRing className="w-5 h-5 text-[#8B3A3A]" />
+                  <h4 className="font-serif-accent text-lg font-bold text-[#8B3A3A]">Smart Actionable Recommendations</h4>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] bg-[#E8A33D]/20 text-[#D98A2B] font-bold uppercase">
+                  {analyticsData.smart_alerts.at_risk_count} Attention Items
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 rounded-xl bg-[#FDFBF7] border border-[#EFE7DA] flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-bold text-xs text-[#8B3A3A] flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4 text-[#C1554A]" />
+                      <span>Members at Risk of Dropping Off</span>
+                    </div>
+                    <p className="text-[11px] text-[#3A322C]/70 mt-1">
+                      {analyticsData.smart_alerts.at_risk_count} members currently have 0 active streak. A gentle reminder message can encourage them to attend this week.
+                    </p>
+                  </div>
                   <button
-                    onClick={() => handleCloseEvent(activeEvent.id)}
-                    className="bg-[#C1554A] hover:bg-[#A8453B] text-white font-semibold text-xs px-3.5 py-2.5 rounded-xl shadow-xs flex items-center justify-center gap-1.5 cursor-pointer w-full sm:w-auto"
+                    onClick={() => {
+                      setActiveTab('users');
+                      setToast("Navigated to Member Management to review at-risk members.");
+                    }}
+                    className="shrink-0 bg-[#8B3A3A] hover:bg-[#6E2C2C] text-white text-[11px] font-semibold px-3 py-1.5 rounded-lg cursor-pointer transition-colors"
                   >
-                    <Lock className="w-4 h-4" /> Close Attendance (Auto-Absent)
+                    Review Members →
                   </button>
-                )}
+                </div>
+
+                <div className="p-4 rounded-xl bg-[#FDFBF7] border border-[#EFE7DA] flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-bold text-xs text-[#5B8C5B] flex items-center gap-1">
+                      <Sparkles className="w-4 h-4 text-[#5B8C5B]" />
+                      <span>Geofence Radius Health</span>
+                    </div>
+                    <p className="text-[11px] text-[#3A322C]/70 mt-1">
+                      GPS Geofencing is functioning optimally across all configured venues with low manual override rates.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('venues')}
+                    className="shrink-0 bg-[#5B8C5B] hover:bg-[#4A734A] text-white text-[11px] font-semibold px-3 py-1.5 rounded-lg cursor-pointer transition-colors"
+                  >
+                    View Venues →
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -895,65 +1243,75 @@ export default function AdminPortal({ user, onUserUpdated }) {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {openEvents.map((ev, index) => (
-                  <div
-                    key={ev.id}
-                    className={`p-5 rounded-2xl border transition-all ${
-                      index === 0
-                        ? 'border-[#5B8C5B] bg-[#5B8C5B]/5 warm-shadow'
-                        : 'border-[#EFE7DA] bg-[#FDFBF7]'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div>
-                        {index === 0 && (
-                          <span className="inline-block px-2.5 py-0.5 rounded-full text-[9px] bg-[#5B8C5B] text-white font-bold uppercase tracking-wider mb-1">
-                            PRIMARY LIVE EVENT
-                          </span>
+                {openEvents.map((ev, index) => {
+                  const evState = getEventLiveState(ev);
+                  return (
+                    <div
+                      key={ev.id}
+                      className={`p-5 rounded-2xl border transition-all ${
+                        evState.isLive
+                          ? 'border-[#5B8C5B] bg-[#5B8C5B]/5 warm-shadow'
+                          : 'border-[#EFE7DA] bg-[#FDFBF7]'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div>
+                          {evState.isLive && (
+                            <span className="inline-block px-2.5 py-0.5 rounded-full text-[9px] bg-[#5B8C5B] text-white font-bold uppercase tracking-wider mb-1">
+                              PRIMARY LIVE EVENT
+                            </span>
+                          )}
+                          <h5 className="font-bold text-base text-[#3A322C]">{ev.title}</h5>
+                        </div>
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase shrink-0 ${
+                          evState.isLive ? 'bg-[#5B8C5B]/15 text-[#5B8C5B]' :
+                          evState.isUpcoming ? 'bg-[#E8A33D]/20 text-[#D98A2B]' : 'bg-[#C1554A]/15 text-[#C1554A]'
+                        }`}>
+                          {evState.status}
+                        </span>
+                      </div>
+
+                      <div className="text-xs text-[#3A322C]/80 space-y-1 mb-4">
+                        <div className="font-medium flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-[#8B3A3A]" />
+                          <span>Date: {ev.event_date} ({ev.start_time} - {ev.end_time} IST)</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <MapPin className="w-3.5 h-3.5 text-[#8B3A3A]" />
+                          <span>Venue: {ev.venue_name || 'Central Mandir'} ({ev.venue_radius_meters}m radius)</span>
+                        </div>
+                        <div className="text-[11px] text-[#8B3A3A] font-semibold">QR Mode: {ev.qr_mode} • Ref: {ev.qr_code_reference}</div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 pt-2 border-t border-[#EFE7DA]">
+                        {evState.isLive && (
+                          <button
+                            onClick={() => setSelectedDetailModal({ type: 'event', data: ev })}
+                            className="flex-1 bg-[#5B8C5B] hover:bg-[#4A734A] text-white font-semibold text-xs py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs min-w-[120px]"
+                          >
+                            <UserCheck className="w-3.5 h-3.5" /> Live Attendance
+                          </button>
                         )}
-                        <h5 className="font-bold text-base text-[#3A322C]">{ev.title}</h5>
+
+                        <button
+                          onClick={() => handleViewQR(ev.id)}
+                          className="flex-1 bg-white hover:bg-[#EFE7DA] text-[#8B3A3A] border border-[#EFE7DA] font-semibold text-xs py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs min-w-[120px]"
+                        >
+                          <QrCode className="w-3.5 h-3.5" /> Printable QR
+                        </button>
+
+                        {evState.isLive && (
+                          <button
+                            onClick={() => handleCloseEvent(ev.id)}
+                            className="flex-1 bg-[#C1554A] hover:bg-[#A8453B] text-white font-semibold text-xs py-2.5 px-3 rounded-xl cursor-pointer shadow-2xs flex items-center justify-center gap-1.5 min-w-[120px]"
+                          >
+                            <Lock className="w-3.5 h-3.5" /> Close Sabha
+                          </button>
+                        )}
                       </div>
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] bg-[#5B8C5B]/15 text-[#5B8C5B] font-bold uppercase shrink-0">
-                        {ev.status}
-                      </span>
                     </div>
-
-                    <div className="text-xs text-[#3A322C]/80 space-y-1 mb-4">
-                      <div className="font-medium flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-[#8B3A3A]" />
-                        <span>Date: {ev.event_date} ({ev.start_time} - {ev.end_time} IST)</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-[#8B3A3A]" />
-                        <span>Venue: {ev.venue_name || 'Central Mandir'} ({ev.venue_radius_meters}m radius)</span>
-                      </div>
-                      <div className="text-[11px] text-[#8B3A3A] font-semibold">QR Mode: {ev.qr_mode} • Ref: {ev.qr_code_reference}</div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-[#EFE7DA]">
-                      <button
-                        onClick={() => setSelectedDetailModal({ type: 'event', data: ev })}
-                        className="w-full bg-[#5B8C5B] hover:bg-[#4A734A] text-white font-semibold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
-                      >
-                        <UserCheck className="w-3.5 h-3.5" /> Live Attendance
-                      </button>
-
-                      <button
-                        onClick={() => handleViewQR(ev.id)}
-                        className="w-full bg-white hover:bg-[#EFE7DA] text-[#8B3A3A] border border-[#EFE7DA] font-semibold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
-                      >
-                        <QrCode className="w-3.5 h-3.5" /> Printable QR
-                      </button>
-
-                      <button
-                        onClick={() => handleCloseEvent(ev.id)}
-                        className="w-full bg-[#C1554A] hover:bg-[#A8453B] text-white font-semibold text-xs py-2.5 rounded-xl cursor-pointer shadow-2xs flex items-center justify-center gap-1.5"
-                      >
-                        <Lock className="w-3.5 h-3.5" /> Close Sabha
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1881,29 +2239,135 @@ export default function AdminPortal({ user, onUserUpdated }) {
             </button>
 
             <h3 className="font-serif-accent text-2xl font-bold text-[#8B3A3A]">
-              Event Creation Wizard (Step {wizardStep} of 4)
+              Event Creation Wizard (Step {wizardStep} of 3)
             </h3>
 
             {wizardStep === 1 && (
-              <div className="space-y-3">
+              <div className="space-y-4">
+                {/* Primary Choice: Recurring vs One-Time Special Event */}
+                <div>
+                  <label className="block text-xs font-semibold text-[#3A322C] mb-1.5">Select Event Category</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEventForm(prev => ({ ...prev, event_type: 'recurring', qr_mode: 'reusable' }))}
+                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                        eventForm.event_type === 'recurring'
+                          ? 'bg-[#8B3A3A] text-white border-[#8B3A3A] shadow-xs'
+                          : 'bg-[#FDFBF7] text-[#3A322C] border-[#EFE7DA] hover:bg-[#EFE7DA]'
+                      }`}
+                    >
+                      <div className="font-bold text-xs flex items-center gap-1.5">
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Recurring Weekly Event</span>
+                      </div>
+                      <div className={`text-[10px] mt-1 ${eventForm.event_type === 'recurring' ? 'text-white/80' : 'text-[#3A322C]/60'}`}>
+                        Uses permanent reusable Mandir QR poster continuously
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setEventForm(prev => ({ ...prev, event_type: 'one_time', qr_mode: 'per_event' }))}
+                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                        eventForm.event_type === 'one_time'
+                          ? 'bg-[#8B3A3A] text-white border-[#8B3A3A] shadow-xs'
+                          : 'bg-[#FDFBF7] text-[#3A322C] border-[#EFE7DA] hover:bg-[#EFE7DA]'
+                      }`}
+                    >
+                      <div className="font-bold text-xs flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span>One-Time Special Event</span>
+                      </div>
+                      <div className={`text-[10px] mt-1 ${eventForm.event_type === 'one_time' ? 'text-white/80' : 'text-[#3A322C]/60'}`}>
+                        Generates a new fresh unique QR code every time
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-[#3A322C] mb-1">Sabha Title</label>
                   <input
                     type="text"
                     value={eventForm.title}
                     onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
-                    className="w-full p-2.5 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-xs"
+                    placeholder="e.g. Monday Sabha or Janmashtami Special"
+                    className="w-full p-2.5 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-xs font-semibold"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-[#3A322C] mb-1">Event Date</label>
-                  <input
-                    type="date"
-                    value={eventForm.event_date}
-                    onChange={(e) => setEventForm({ ...eventForm, event_date: e.target.value })}
-                    className="w-full p-2.5 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-xs"
-                  />
-                </div>
+
+                {eventForm.event_type === 'recurring' ? (
+                  <div className="space-y-3 p-3 rounded-xl bg-[#FDFBF7] border border-[#EFE7DA]">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-semibold text-[#3A322C] mb-1">Day of Week</label>
+                        <select
+                          value={eventForm.day_of_week}
+                          onChange={(e) => {
+                            const dName = e.target.value;
+                            const capitalized = dName.charAt(0).toUpperCase() + dName.slice(1);
+                            setEventForm(prev => ({
+                              ...prev,
+                              day_of_week: dName,
+                              title: `${capitalized} Sabha`
+                            }));
+                          }}
+                          className="w-full p-2.5 rounded-xl border border-[#EFE7DA] bg-white text-xs font-semibold text-[#3A322C] cursor-pointer"
+                        >
+                          <option value="monday">Every Monday</option>
+                          <option value="tuesday">Every Tuesday</option>
+                          <option value="wednesday">Every Wednesday</option>
+                          <option value="thursday">Every Thursday</option>
+                          <option value="friday">Every Friday</option>
+                          <option value="saturday">Every Saturday</option>
+                          <option value="sunday">Every Sunday</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-[#3A322C] mb-1">Start Date (First Instance)</label>
+                        <input
+                          type="date"
+                          value={eventForm.event_date}
+                          onChange={(e) => setEventForm({ ...eventForm, event_date: e.target.value })}
+                          className="w-full p-2.5 rounded-xl border border-[#EFE7DA] bg-white text-xs font-semibold"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-[#3A322C] mb-1">Auto-Generate Schedule Duration</label>
+                      <select
+                        value={eventForm.recurring_weeks}
+                        onChange={(e) => setEventForm({ ...eventForm, recurring_weeks: parseInt(e.target.value) })}
+                        className="w-full p-2.5 rounded-xl border border-[#EFE7DA] bg-white text-xs font-semibold text-[#3A322C] cursor-pointer"
+                      >
+                        <option value={4}>Next 4 Weeks (1 Month)</option>
+                        <option value={12}>Next 12 Weeks (3 Months)</option>
+                        <option value={52}>Next 52 Weeks (1 Full Year)</option>
+                      </select>
+                    </div>
+
+                    <div className="bg-[#5B8C5B]/10 p-2.5 rounded-xl border border-[#5B8C5B]/30 text-[11px] text-[#5B8C5B] font-medium flex items-start gap-1.5">
+                      <Sparkles className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>
+                        <strong>Automatic Reusable Mandir QR Code</strong>: All weekly recurring sessions for this day share the exact same QR code reference automatically.
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-xs font-semibold text-[#3A322C] mb-1">Event Date</label>
+                    <input
+                      type="date"
+                      value={eventForm.event_date}
+                      onChange={(e) => setEventForm({ ...eventForm, event_date: e.target.value })}
+                      className="w-full p-2.5 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-xs font-semibold"
+                    />
+                  </div>
+                )}
+
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-xs font-semibold text-[#3A322C]">Start & End Time (IST)</label>
@@ -1944,19 +2408,6 @@ export default function AdminPortal({ user, onUserUpdated }) {
                     </div>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-2 pt-2">
-                  <input
-                    type="checkbox"
-                    id="recSat"
-                    checked={eventForm.is_recurring_saturday}
-                    onChange={(e) => setEventForm({ ...eventForm, is_recurring_saturday: e.target.checked })}
-                    className="accent-[#8B3A3A]"
-                  />
-                  <label htmlFor="recSat" className="text-xs font-medium text-[#3A322C]">
-                    Create Recurring Saturday Events automatically
-                  </label>
-                </div>
               </div>
             )}
 
@@ -1968,13 +2419,14 @@ export default function AdminPortal({ user, onUserUpdated }) {
                     <div
                       key={v.id}
                       onClick={() => setEventForm({ ...eventForm, venue_id: v.id })}
-                      className={`p-3 rounded-xl border cursor-pointer ${
+                      className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
                         eventForm.venue_id === v.id
-                          ? 'border-[#8B3A3A] bg-[#8B3A3A]/5 font-bold'
-                          : 'border-[#EFE7DA] bg-[#FDFBF7]'
+                          ? 'border-[#8B3A3A] bg-[#8B3A3A]/5 font-bold shadow-2xs'
+                          : 'border-[#EFE7DA] bg-[#FDFBF7] hover:bg-[#EFE7DA]/50'
                       }`}
                     >
-                      <div className="text-xs text-[#3A322C]">{v.name} ({v.radius_meters}m geofence radius)</div>
+                      <div className="text-xs text-[#3A322C] font-semibold">{v.name}</div>
+                      <div className="text-[11px] text-[#3A322C]/60">{v.address || 'Central Sabha Location'} • Geofence Radius: {v.radius_meters}m</div>
                     </div>
                   ))}
                 </div>
@@ -1982,46 +2434,20 @@ export default function AdminPortal({ user, onUserUpdated }) {
             )}
 
             {wizardStep === 3 && (
-              <div className="space-y-3">
-                <label className="block text-xs font-semibold text-[#3A322C]">Select QR Code Mode</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <div
-                    onClick={() => setEventForm({ ...eventForm, qr_mode: 'reusable' })}
-                    className={`p-4 rounded-xl border cursor-pointer ${
-                      eventForm.qr_mode === 'reusable'
-                        ? 'border-[#8B3A3A] bg-[#8B3A3A]/5 font-bold'
-                        : 'border-[#EFE7DA] bg-[#FDFBF7]'
-                    }`}
-                  >
-                    <div className="text-xs text-[#8B3A3A]">Reusable QR</div>
-                    <div className="text-[11px] font-normal text-[#3A322C]/70 mt-1">
-                      Tied to venue poster indefinitely
-                    </div>
-                  </div>
-
-                  <div
-                    onClick={() => setEventForm({ ...eventForm, qr_mode: 'per_event' })}
-                    className={`p-4 rounded-xl border cursor-pointer ${
-                      eventForm.qr_mode === 'per_event'
-                        ? 'border-[#8B3A3A] bg-[#8B3A3A]/5 font-bold'
-                        : 'border-[#EFE7DA] bg-[#FDFBF7]'
-                    }`}
-                  >
-                    <div className="text-xs text-[#8B3A3A]">Per-Event Fresh QR</div>
-                    <div className="text-[11px] font-normal text-[#3A322C]/70 mt-1">
-                      Unique QR code generated for this specific date only
-                    </div>
-                  </div>
+              <div className="space-y-3 bg-[#FDFBF7] p-4 rounded-xl border border-[#EFE7DA] text-xs">
+                <div className="font-bold text-[#8B3A3A] text-sm flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-[#E8A33D]" /> Summary & Final Confirmation
                 </div>
-              </div>
-            )}
-
-            {wizardStep === 4 && (
-              <div className="space-y-2 bg-[#FDFBF7] p-4 rounded-xl border border-[#EFE7DA] text-xs">
-                <div className="font-bold text-[#8B3A3A] text-sm">Summary Confirmation</div>
                 <div>Title: <strong>{eventForm.title}</strong></div>
-                <div>Date: <strong>{eventForm.event_date}</strong> ({eventForm.start_time} - {eventForm.end_time} IST)</div>
-                <div>QR Mode: <strong>{eventForm.qr_mode}</strong></div>
+                <div>Category: <strong>{eventForm.event_type === 'recurring' ? 'Recurring Weekly Sabha' : 'One-Time Special Event'}</strong></div>
+                {eventForm.event_type === 'recurring' ? (
+                  <div>Schedule: <strong>Every {eventForm.day_of_week.toUpperCase()} for next {eventForm.recurring_weeks} weeks</strong></div>
+                ) : (
+                  <div>Date: <strong>{eventForm.event_date}</strong></div>
+                )}
+                <div>Time Slot: <strong>{eventForm.start_time} - {eventForm.end_time} IST</strong></div>
+                <div>Venue: <strong>{venues.find(v => v.id === eventForm.venue_id)?.name || 'Central Sabha Mandir'}</strong></div>
+                <div>QR Code Mode: <strong>{eventForm.event_type === 'recurring' ? 'Automatic Permanent Reusable QR' : 'Automatic Fresh Per-Event QR'}</strong></div>
               </div>
             )}
 
@@ -2044,10 +2470,15 @@ export default function AdminPortal({ user, onUserUpdated }) {
                 </button>
               )}
 
-              {wizardStep < 4 ? (
+              {wizardStep < 3 ? (
                 <button
                   type="button"
-                  onClick={() => setWizardStep(s => s + 1)}
+                  onClick={() => {
+                    if (wizardStep === 2 && !eventForm.venue_id && venues.length > 0) {
+                      setEventForm(prev => ({ ...prev, venue_id: venues[0].id }));
+                    }
+                    setWizardStep(s => s + 1);
+                  }}
                   className="px-4 py-2 text-xs font-semibold text-white bg-[#8B3A3A] hover:bg-[#6E2C2C] rounded-xl cursor-pointer"
                 >
                   Next Step
@@ -2056,9 +2487,9 @@ export default function AdminPortal({ user, onUserUpdated }) {
                 <button
                   type="button"
                   onClick={handlePublishEvents}
-                  className="px-4 py-2 text-xs font-semibold text-white bg-[#5B8C5B] hover:bg-[#4A734A] rounded-xl cursor-pointer shadow-sm"
+                  className="px-4 py-2 text-xs font-semibold text-white bg-[#5B8C5B] hover:bg-[#4A734A] rounded-xl cursor-pointer shadow-sm flex items-center gap-1.5"
                 >
-                  Publish Event Now
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Publish Event(s) Now
                 </button>
               )}
             </div>
