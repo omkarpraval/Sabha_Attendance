@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import User, UserStatus, UserRole, MemberCategory
+from app.models import User, UserStatus, UserRole, MemberCategory, Attendance, AttendanceAudit, Event, PushSubscription
 from app.schemas import UserResponse, UserCreateByAdmin, UserUpdateByAdmin
 from app.auth import get_current_user, require_admin, require_karyakar_or_admin, hash_password
 
@@ -155,3 +155,41 @@ def update_user_role(
     db.commit()
     db.refresh(target)
     return target
+
+@router.delete("/{user_id}")
+def delete_user_by_admin(
+    user_id: int,
+    current_user: User = Depends(require_karyakar_or_admin),
+    db: Session = Depends(get_db)
+):
+    """Delete a user account cleanly (Accessible by Karyakars & Admins)."""
+    target = db.query(User).filter(User.id == user_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if target.id == current_user.id:
+        raise HTTPException(status_code=400, detail="You cannot delete your own active session account.")
+
+    # 1. Nullify marked_by_id references in attendances marked by this user
+    db.query(Attendance).filter(Attendance.marked_by_id == target.id).update({"marked_by_id": None}, synchronize_session=False)
+
+    # 2. Nullify created_by_id in events
+    db.query(Event).filter(Event.created_by_id == target.id).update({"created_by_id": None}, synchronize_session=False)
+
+    # 3. Clean up PushSubscriptions
+    db.query(PushSubscription).filter(PushSubscription.user_id == target.id).delete(synchronize_session=False)
+
+    # 4. Clean up AttendanceAudit records for this user's attendances
+    user_attendance_ids = [a[0] for a in db.query(Attendance.id).filter(Attendance.user_id == target.id).all()]
+    if user_attendance_ids:
+        db.query(AttendanceAudit).filter(AttendanceAudit.attendance_id.in_(user_attendance_ids)).delete(synchronize_session=False)
+
+    db.query(AttendanceAudit).filter(AttendanceAudit.modified_by_id == target.id).delete(synchronize_session=False)
+
+    # 5. Delete all attendances for this user
+    db.query(Attendance).filter(Attendance.user_id == target.id).delete(synchronize_session=False)
+
+    # 6. Delete target user
+    db.delete(target)
+    db.commit()
+    return {"status": "success", "message": f"User '{target.name}' deleted successfully."}

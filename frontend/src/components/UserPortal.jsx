@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { QrCode, Flame, Calendar as CalendarIcon, CheckCircle2, Clock, MapPin, AlertCircle, Sparkles, Send } from 'lucide-react';
+import { QrCode, Flame, Calendar as CalendarIcon, CheckCircle2, Clock, MapPin, AlertCircle, Sparkles, Send, BarChart3, TrendingUp, Award, PieChart } from 'lucide-react';
 import { apiFetch } from '../api';
 import QRScannerModal from './QRScannerModal';
 
@@ -118,14 +118,22 @@ export default function UserPortal({ user, onUserUpdated }) {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="py-16 text-center">
+        <div className="w-10 h-10 border-4 border-[#8B3A3A] border-t-transparent rounded-full animate-spin mx-auto"></div>
+        <div className="text-xs text-[#3A322C]/70 mt-3">Loading your attendance portal...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
       
-      {/* Welcome Banner & Streak Hero */}
-      <div className="bg-gradient-to-r from-[#8B3A3A] to-[#6E2C2C] rounded-2xl p-6 text-white warm-shadow relative overflow-hidden">
+      {/* Header Greeting Banner & Streak Badge */}
+      <div className="bg-gradient-to-r from-[#8B3A3A] via-[#A8453B] to-[#6E2C2C] text-white rounded-3xl p-6 md:p-8 warm-shadow relative overflow-hidden">
         <div className="absolute right-0 top-0 w-64 h-64 bg-[#E8A33D]/10 rounded-full blur-2xl pointer-events-none"></div>
-
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative z-10">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
           <div>
             <div className="flex items-center gap-2 text-[#E8A33D] text-xs font-bold uppercase tracking-wider mb-1">
               <Sparkles className="w-4 h-4" />
@@ -262,6 +270,94 @@ export default function UserPortal({ user, onUserUpdated }) {
             </div>
           </div>
         )}
+      </div>
+
+      {/* PERSONAL ATTENDANCE RECORD (GRAPH / PERCENTAGE) */}
+      <div className="bg-white rounded-2xl p-6 warm-shadow border border-[#EFE7DA] space-y-5">
+        <div className="flex items-center justify-between border-b border-[#EFE7DA] pb-3">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-[#8B3A3A]" />
+            <div>
+              <h3 className="font-serif-accent text-lg font-bold text-[#8B3A3A]">
+                Personal Attendance Record & Analytics
+              </h3>
+              <p className="text-xs text-[#3A322C]/70 font-medium">Your historical turnout percentage and monthly streak graph</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#5B8C5B]/15 text-[#5B8C5B] font-bold text-xs">
+            <Award className="w-4 h-4" />
+            <span>{history.length > 0 ? Math.round((history.filter(h => h.status === 'present').length / history.length) * 100) : 100}% Rate</span>
+          </div>
+        </div>
+
+        {/* Attendance Summary Stat Cards */}
+        <div className="grid grid-cols-3 gap-3 text-center">
+          <div className="p-3 bg-[#5B8C5B]/10 rounded-xl border border-[#5B8C5B]/20">
+            <div className="text-[11px] text-[#5B8C5B] font-bold uppercase">Present</div>
+            <div className="text-xl font-bold text-[#5B8C5B]">{history.filter(h => h.status === 'present').length}</div>
+            <div className="text-[10px] text-[#3A322C]/60 font-medium">Sabhas Attended</div>
+          </div>
+
+          <div className="p-3 bg-[#C1554A]/10 rounded-xl border border-[#C1554A]/20">
+            <div className="text-[11px] text-[#C1554A] font-bold uppercase">Absent</div>
+            <div className="text-xl font-bold text-[#C1554A]">{history.filter(h => h.status === 'absent').length}</div>
+            <div className="text-[10px] text-[#3A322C]/60 font-medium">Missed Sessions</div>
+          </div>
+
+          <div className="p-3 bg-[#E8A33D]/10 rounded-xl border border-[#E8A33D]/20">
+            <div className="text-[11px] text-[#E8A33D] font-bold uppercase">Excused</div>
+            <div className="text-xl font-bold text-[#E8A33D]">{history.filter(h => h.status === 'excused').length}</div>
+            <div className="text-[10px] text-[#3A322C]/60 font-medium">Prior Informed</div>
+          </div>
+        </div>
+
+        {/* Monthly Attendance Percentage Graph Bars */}
+        <div className="space-y-3 pt-1">
+          <div className="text-xs font-semibold text-[#8B3A3A] flex items-center justify-between">
+            <span>Monthly Attendance Progress (%)</span>
+            <span className="text-[11px] text-[#3A322C]/60 font-medium">Last 6 Months</span>
+          </div>
+
+          {(() => {
+            const monthlyMap = {};
+            history.forEach(h => {
+              const dateStr = h.timestamp_utc || h.event_date;
+              if (!dateStr) return;
+              const key = dateStr.substring(0, 7);
+              const label = new Date(dateStr).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+              if (!monthlyMap[key]) monthlyMap[key] = { label, total: 0, present: 0 };
+              monthlyMap[key].total += 1;
+              if (h.status === 'present') monthlyMap[key].present += 1;
+            });
+
+            const months = Object.values(monthlyMap).slice(0, 6);
+            if (months.length === 0) {
+              return (
+                <div className="py-4 text-center text-xs text-[#3A322C]/60 italic">
+                  Attendance data graph will appear after your first Sabha scan.
+                </div>
+              );
+            }
+
+            return months.map((m, i) => {
+              const pct = Math.round((m.present / m.total) * 100);
+              return (
+                <div key={i} className="space-y-1">
+                  <div className="flex justify-between text-xs font-medium text-[#3A322C]">
+                    <span>{m.label}</span>
+                    <span className="font-mono text-[#5B8C5B] font-bold">{pct}% ({m.present}/{m.total} Sabhas)</span>
+                  </div>
+                  <div className="w-full bg-[#EFE7DA]/60 h-2.5 rounded-full overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-[#5B8C5B] to-[#8B3A3A] h-full rounded-full transition-all duration-300"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            });
+          })()}
+        </div>
       </div>
 
       {/* Attendance History Calendar Graph */}

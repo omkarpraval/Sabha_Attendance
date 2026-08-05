@@ -6,8 +6,8 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Event, Venue, User, Attendance, EventStatus, UserStatus, AttendanceStatus, MarkingMethod, QRMode
-from app.schemas import EventCreate, EventResponse
+from app.models import Event, Venue, User, Attendance, AttendanceAudit, EventStatus, UserStatus, AttendanceStatus, MarkingMethod, QRMode
+from app.schemas import EventCreate, EventResponse, EventUpdate
 from app.auth import get_current_user, require_admin
 from app.utils.qr import generate_qr_base64
 from app.utils.reports import generate_qr_poster_pdf
@@ -284,3 +284,87 @@ def close_event(
         resp.venue_longitude = ev.venue.longitude
         resp.venue_radius_meters = ev.venue.radius_meters
     return resp
+
+@router.put("/{event_id}", response_model=EventResponse)
+def update_event(
+    event_id: int,
+    req: EventUpdate,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    ev = db.query(Event).filter(Event.id == event_id).first()
+    if not ev:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    if req.title is not None: ev.title = req.title
+    if req.event_date is not None: ev.event_date = req.event_date
+    if req.start_time is not None: ev.start_time = req.start_time
+    if req.end_time is not None: ev.end_time = req.end_time
+    if req.venue_id is not None:
+        venue = db.query(Venue).filter(Venue.id == req.venue_id).first()
+        if not venue:
+            raise HTTPException(status_code=404, detail="Venue not found")
+        ev.venue_id = req.venue_id
+    if req.qr_mode is not None: ev.qr_mode = req.qr_mode
+
+    db.commit()
+    db.refresh(ev)
+
+    resp = EventResponse.from_orm(ev)
+    if ev.venue:
+        resp.venue_name = ev.venue.name
+        resp.venue_latitude = ev.venue.latitude
+        resp.venue_longitude = ev.venue.longitude
+        resp.venue_radius_meters = ev.venue.radius_meters
+    return resp
+
+@router.delete("/recurring-series")
+def delete_recurring_series(
+    qr_ref: str = Query(...),
+    delete_all: bool = Query(True),
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Deletes all events associated with a recurring series (by qr_code_reference)."""
+    query = db.query(Event).filter(Event.qr_code_reference == qr_ref)
+    if not delete_all:
+        query = query.filter(Event.status == EventStatus.OPEN)
+
+    events_to_delete = query.all()
+    if not events_to_delete:
+        raise HTTPException(status_code=404, detail="No matching events found for this recurring series.")
+
+    deleted_count = 0
+    for ev in events_to_delete:
+        att_ids = [a[0] for a in db.query(Attendance.id).filter(Attendance.event_id == ev.id).all()]
+        if att_ids:
+            db.query(AttendanceAudit).filter(AttendanceAudit.attendance_id.in_(att_ids)).delete(synchronize_session=False)
+        db.query(Attendance).filter(Attendance.event_id == ev.id).delete(synchronize_session=False)
+        db.delete(ev)
+        deleted_count += 1
+
+    db.commit()
+    return {
+        "status": "success",
+        "message": f"Successfully deleted {deleted_count} recurring event occurrence(s) for series '{qr_ref}'."
+    }
+
+@router.delete("/{event_id}")
+def delete_single_event(
+    event_id: int,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Deletes a single event and its associated attendance records."""
+    ev = db.query(Event).filter(Event.id == event_id).first()
+    if not ev:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    att_ids = [a[0] for a in db.query(Attendance.id).filter(Attendance.event_id == ev.id).all()]
+    if att_ids:
+        db.query(AttendanceAudit).filter(AttendanceAudit.attendance_id.in_(att_ids)).delete(synchronize_session=False)
+    db.query(Attendance).filter(Attendance.event_id == ev.id).delete(synchronize_session=False)
+
+    db.delete(ev)
+    db.commit()
+    return {"status": "success", "message": f"Event '{ev.title}' deleted successfully."}

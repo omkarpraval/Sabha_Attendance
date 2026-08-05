@@ -5,13 +5,11 @@ import AuthModal from './components/AuthModal';
 import UserPortal from './components/UserPortal';
 import KaryakarPortal from './components/KaryakarPortal';
 import AdminPortal from './components/AdminPortal';
-import PWAInstallTip from './components/PWAInstallTip';
 import { apiFetch, getAuthToken, setAuthToken, removeAuthToken } from './api';
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showPwaTip, setShowPwaTip] = useState(true);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [autoScanNotice, setAutoScanNotice] = useState(null);
 
@@ -272,9 +270,6 @@ export default function App() {
           </>
         )}
       </main>
-
-      {/* PWA Home Screen Installation Tip */}
-      {showPwaTip && <PWAInstallTip onClose={() => setShowPwaTip(false)} />}
     </div>
   );
 }

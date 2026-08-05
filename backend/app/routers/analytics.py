@@ -107,6 +107,74 @@ def get_dashboard_analytics(
         for u in users if u.current_streak == 0
     ][:5]
 
+    # Monthly & Yearly Aggregations
+    monthly_map = {}
+    yearly_map = {}
+
+    for ev in events:
+        ev_atts = [a for a in attendances if a.event_id == ev.id]
+        p_count = len([a for a in ev_atts if a.status == AttendanceStatus.PRESENT])
+        tot = len(ev_atts) if len(ev_atts) > 0 else (total_members or 1)
+
+        # Monthly key: YYYY-MM
+        m_key = ev.event_date[:7] if (ev.event_date and len(ev.event_date) >= 7) else "2026-08"
+        if m_key not in monthly_map:
+            try:
+                dt = datetime.datetime.strptime(m_key + "-01", "%Y-%m-%d")
+                m_label = dt.strftime("%b %Y")
+            except Exception:
+                m_label = m_key
+            monthly_map[m_key] = {
+                "key": m_key,
+                "label": m_label,
+                "present_count": 0,
+                "total_capacity": 0,
+                "sabha_count": 0
+            }
+        monthly_map[m_key]["present_count"] += p_count
+        monthly_map[m_key]["total_capacity"] += tot
+        monthly_map[m_key]["sabha_count"] += 1
+
+        # Yearly key: YYYY
+        y_key = ev.event_date[:4] if (ev.event_date and len(ev.event_date) >= 4) else "2026"
+        if y_key not in yearly_map:
+            yearly_map[y_key] = {
+                "key": y_key,
+                "label": f"Year {y_key}",
+                "present_count": 0,
+                "total_capacity": 0,
+                "sabha_count": 0
+            }
+        yearly_map[y_key]["present_count"] += p_count
+        yearly_map[y_key]["total_capacity"] += tot
+        yearly_map[y_key]["sabha_count"] += 1
+
+    monthly_trends = []
+    for k in sorted(monthly_map.keys()):
+        item = monthly_map[k]
+        pct = round((item["present_count"] / item["total_capacity"] * 100)) if item["total_capacity"] > 0 else 0
+        monthly_trends.append({
+            "key": item["key"],
+            "label": item["label"],
+            "present_count": item["present_count"],
+            "total_capacity": item["total_capacity"],
+            "sabha_count": item["sabha_count"],
+            "turnout_pct": pct
+        })
+
+    yearly_trends = []
+    for k in sorted(yearly_map.keys()):
+        item = yearly_map[k]
+        pct = round((item["present_count"] / item["total_capacity"] * 100)) if item["total_capacity"] > 0 else 0
+        yearly_trends.append({
+            "key": item["key"],
+            "label": item["label"],
+            "present_count": item["present_count"],
+            "total_capacity": item["total_capacity"],
+            "sabha_count": item["sabha_count"],
+            "turnout_pct": pct
+        })
+
     return {
         "kpis": {
             "total_members": total_members,
@@ -118,6 +186,8 @@ def get_dashboard_analytics(
             "peak_sabha_day": peak_sabha_day
         },
         "weekly_trends": weekly_trends[-10:],
+        "monthly_trends": monthly_trends[-12:],
+        "yearly_trends": yearly_trends,
         "punctuality": {
             "on_time_pct": on_time_pct,
             "grace_pct": grace_pct,

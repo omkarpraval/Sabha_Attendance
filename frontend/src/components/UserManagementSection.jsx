@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, UserPlus, Pencil, CheckCircle2, AlertCircle, Eye, EyeOff, Lock, User, Phone, Mail, Calendar, Shield, Sparkles, X } from 'lucide-react';
+import { Search, UserPlus, Pencil, CheckCircle2, AlertCircle, Eye, EyeOff, Lock, User, Phone, Mail, Calendar, Shield, Sparkles, X, Trash2 } from 'lucide-react';
 import { apiFetch } from '../api';
 
 export default function UserManagementSection({ currentUser }) {
@@ -17,6 +17,7 @@ export default function UserManagementSection({ currentUser }) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [deletingUser, setDeletingUser] = useState(null);
 
   // Add / Edit Form state
   const [formData, setFormData] = useState({
@@ -290,18 +291,76 @@ export default function UserManagementSection({ currentUser }) {
                     <span className="font-semibold">{u.current_streak}</span> streak ({u.lifetime_count} total)
                   </td>
                   <td className="p-3 text-right">
-                    <button
-                      onClick={() => handleOpenEditModal(u)}
-                      className="px-3 py-1.5 rounded-lg bg-[#FDFBF7] hover:bg-[#8B3A3A] text-[#8B3A3A] hover:text-white border border-[#8B3A3A]/30 text-xs font-semibold transition-all inline-flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                      <span>Edit</span>
-                    </button>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        onClick={() => handleOpenEditModal(u)}
+                        className="px-2.5 py-1.5 rounded-lg bg-[#FDFBF7] hover:bg-[#8B3A3A] text-[#8B3A3A] hover:text-white border border-[#8B3A3A]/30 text-xs font-semibold transition-all inline-flex items-center gap-1 cursor-pointer"
+                        title="Edit User Details"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        <span>Edit</span>
+                      </button>
+
+                      {currentUser?.id !== u.id && (
+                        <button
+                          onClick={() => setDeletingUser(u)}
+                          className="px-2.5 py-1.5 rounded-lg bg-[#FDFBF7] hover:bg-[#C1554A] text-[#C1554A] hover:text-white border border-[#C1554A]/30 text-xs font-semibold transition-all inline-flex items-center gap-1 cursor-pointer"
+                          title="Delete User Account"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete</span>
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Delete User Confirmation Modal */}
+      {deletingUser && (
+        <div className="fixed inset-0 z-50 bg-[#3A322C]/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 warm-shadow border border-[#EFE7DA] text-center space-y-4">
+            <div className="w-12 h-12 rounded-full bg-[#C1554A]/15 text-[#C1554A] flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-serif-accent text-xl font-bold text-[#8B3A3A]">Delete Member Account?</h3>
+              <p className="text-xs text-[#3A322C]/80 mt-1">
+                Are you sure you want to permanently delete <strong>{deletingUser.name}</strong> ({deletingUser.phone})? This action cannot be undone.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                onClick={() => setDeletingUser(null)}
+                className="flex-1 px-4 py-2 rounded-xl bg-[#FDFBF7] hover:bg-[#EFE7DA] text-[#3A322C] font-semibold text-xs border border-[#EFE7DA] cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  setActionLoading(true);
+                  try {
+                    await apiFetch(`/users/${deletingUser.id}`, { method: 'DELETE' });
+                    setSuccess(`Successfully deleted user account for ${deletingUser.name}!`);
+                    setDeletingUser(null);
+                    fetchUsers();
+                  } catch (err) {
+                    setError(err.message);
+                  } finally {
+                    setActionLoading(false);
+                  }
+                }}
+                disabled={actionLoading}
+                className="flex-1 px-4 py-2 rounded-xl bg-[#C1554A] hover:bg-[#A8453B] text-white font-semibold text-xs cursor-pointer shadow-xs"
+              >
+                {actionLoading ? 'Deleting...' : 'Yes, Delete'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

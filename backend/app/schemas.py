@@ -140,6 +140,14 @@ class VenueResponse(BaseModel):
         from_attributes = True
 
 # Event Schemas
+class EventUpdate(BaseModel):
+    title: Optional[str] = None
+    event_date: Optional[str] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    venue_id: Optional[int] = None
+    qr_mode: Optional[str] = None
+
 class EventCreate(BaseModel):
     title: str
     event_type: str = "one_time"  # "recurring" or "one_time"
