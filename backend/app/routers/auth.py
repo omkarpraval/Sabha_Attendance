@@ -1,6 +1,6 @@
 import datetime
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -9,6 +9,7 @@ from app.models import User, UserRole, UserStatus
 from app.schemas import SignupRequest, LoginRequest, TokenResponse, UserResponse, ForgotPasswordRequest, ResetPasswordRequest
 from app.auth import hash_password, verify_password, create_access_token, get_current_user
 from app.utils.email import send_password_reset_email
+from app.utils.rate_limiter import login_limiter
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
@@ -50,7 +51,10 @@ def signup(req: SignupRequest, db: Session = Depends(get_db)):
     return new_user
 
 @router.post("/login", response_model=TokenResponse)
-def login(req: LoginRequest, db: Session = Depends(get_db)):
+def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
+    client_ip = request.client.host if request.client else "127.0.0.1"
+    login_limiter.check(client_ip)
+
     # Match user by either phone number OR email address
     user = db.query(User).filter(
         (User.phone == req.identifier) | (User.email == req.identifier)

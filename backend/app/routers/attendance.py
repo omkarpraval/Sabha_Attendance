@@ -1,6 +1,7 @@
 import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
@@ -90,13 +91,21 @@ def scan_and_mark_attendance(
             detail=f"Sabha attendance window is active between {event.start_time} and {event.end_time} IST. Current server time: {current_time_str} IST."
         )
 
-    # 3. Geofence radius validation (Haversine distance calculation)
+    # 3. Geofence radius & GPS Accuracy validation
+    if req.accuracy is not None and req.accuracy > 100.0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"GPS signal accuracy is too weak (±{int(req.accuracy)}m). Please stand in an open area for a better location fix."
+        )
+
     distance = calculate_haversine_distance(
         req.latitude, req.longitude,
         venue.latitude, venue.longitude
     )
 
-    if distance > venue.radius_meters:
+    # 15-meter indoor buffer tolerance for Mandir hall walls & GPS drift
+    effective_radius = (venue.radius_meters or 100.0) + 15.0
+    if distance > effective_radius:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"You appear to be outside the venue geofence radius ({int(distance)}m away from {venue.name}, allowed radius: {int(venue.radius_meters)}m). Please move closer or ask a Karyakar for assistance."
@@ -145,8 +154,32 @@ def scan_and_mark_attendance(
     current_user.current_streak += 1
     current_user.lifetime_count += 1
 
-    db.commit()
-    db.refresh(attendance)
+    try:
+        db.commit()
+        db.refresh(attendance)
+    except IntegrityError:
+        db.rollback()
+        existing_duplicate = db.query(Attendance).filter(
+            Attendance.event_id == event.id,
+            Attendance.user_id == current_user.id
+        ).first()
+        if existing_duplicate:
+            return AttendanceResponse(
+                id=existing_duplicate.id,
+                event_id=existing_duplicate.event_id,
+                event_title=event.title,
+                event_date=event.event_date,
+                user_id=existing_duplicate.user_id,
+                user_name=current_user.name,
+                user_phone=current_user.phone,
+                status=existing_duplicate.status,
+                marked_by_name=existing_duplicate.marked_by_user.name if existing_duplicate.marked_by_user else "Self (QR)",
+                marking_method=existing_duplicate.marking_method,
+                excuse_reason=existing_duplicate.excuse_reason,
+                distance_meters=existing_duplicate.distance_meters,
+                timestamp_utc=existing_duplicate.timestamp_utc
+            )
+        raise HTTPException(status_code=400, detail="Attendance already marked for this event.")
 
     return AttendanceResponse(
         id=attendance.id,
@@ -367,6 +400,8 @@ def edit_attendance_with_audit(
 def get_attendance_history(
     user_id: Optional[int] = Query(None),
     event_id: Optional[int] = Query(None),
+    limit: Optional[int] = Query(None),
+    offset: Optional[int] = Query(0),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -385,7 +420,11 @@ def get_attendance_history(
     if event_id:
         query = query.filter(Attendance.event_id == event_id)
 
-    records = query.order_by(Attendance.timestamp_utc.desc()).all()
+    query = query.order_by(Attendance.timestamp_utc.desc())
+    if limit is not None and limit > 0:
+        query = query.offset(offset or 0).limit(limit)
+
+    records = query.all()
 
     result = []
     for r in records:

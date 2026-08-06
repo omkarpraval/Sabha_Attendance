@@ -108,6 +108,23 @@ class UserCreateByAdmin(BaseModel):
             return validate_email_format(v)
         return None
 
+class BulkUserItem(BaseModel):
+    name: str
+    phone: str
+    email: Optional[str] = None
+    dob: Optional[str] = None
+    member_category: Optional[str] = "satsangi"
+    role: Optional[str] = "user"
+    password: Optional[str] = None
+
+class BulkUserImportRequest(BaseModel):
+    users: List[BulkUserItem]
+
+class BulkUserImportResponse(BaseModel):
+    created_count: int
+    skipped_count: int
+    skipped_phones: List[str]
+
 class UserUpdateByAdmin(BaseModel):
     name: Optional[str] = None
     phone: Optional[str] = None
@@ -184,6 +201,7 @@ class ScanAttendanceRequest(BaseModel):
     qr_code_reference: str
     latitude: float
     longitude: float
+    accuracy: Optional[float] = None
 
 class ManualAttendanceRequest(BaseModel):
     user_id: int

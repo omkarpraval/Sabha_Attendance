@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { CheckCircle2, AlertCircle, Loader2, X } from 'lucide-react';
 import Header from './components/Header';
-import AuthModal from './components/AuthModal';
-import UserPortal from './components/UserPortal';
-import KaryakarPortal from './components/KaryakarPortal';
-import AdminPortal from './components/AdminPortal';
 import { apiFetch, getAuthToken, setAuthToken, removeAuthToken } from './api';
+import { syncOfflineScans } from './utils/offlineQueue';
+
+const AuthModal = lazy(() => import('./components/AuthModal'));
+const UserPortal = lazy(() => import('./components/UserPortal'));
+const KaryakarPortal = lazy(() => import('./components/KaryakarPortal'));
+const AdminPortal = lazy(() => import('./components/AdminPortal'));
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -14,6 +16,20 @@ export default function App() {
   const [autoScanNotice, setAutoScanNotice] = useState(null);
 
   useEffect(() => {
+    // Register PWA Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(err => {
+        console.warn('SW registration failed:', err);
+      });
+    }
+
+    // Sync offline queued scans when online
+    const handleOnline = () => {
+      syncOfflineScans(apiFetch);
+    };
+    window.addEventListener('online', handleOnline);
+    syncOfflineScans(apiFetch);
+
     // Listen for PWA install prompt
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
@@ -30,6 +46,10 @@ export default function App() {
     }
 
     checkAuth();
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
   }, []);
 
   useEffect(() => {
@@ -254,21 +274,28 @@ export default function App() {
 
       {/* Main Content Body */}
       <main className="pb-12">
-        {!user ? (
-          <AuthModal onLoginSuccess={handleLoginSuccess} />
-        ) : (
-          <>
-            {user.role === 'admin' && (
-              <AdminPortal user={user} onUserUpdated={checkAuth} />
-            )}
-            {user.role === 'karyakar' && (
-              <KaryakarPortal user={user} onUserUpdated={checkAuth} />
-            )}
-            {user.role === 'user' && (
-              <UserPortal user={user} onUserUpdated={checkAuth} />
-            )}
-          </>
-        )}
+        <Suspense fallback={
+          <div className="py-20 flex flex-col items-center justify-center space-y-3">
+            <Loader2 className="w-8 h-8 text-[#8B3A3A] animate-spin" />
+            <p className="text-xs font-semibold text-[#8B3A3A]">Loading Sabha Application Modules...</p>
+          </div>
+        }>
+          {!user ? (
+            <AuthModal onLoginSuccess={handleLoginSuccess} />
+          ) : (
+            <>
+              {user.role === 'admin' && (
+                <AdminPortal user={user} onUserUpdated={checkAuth} />
+              )}
+              {user.role === 'karyakar' && (
+                <KaryakarPortal user={user} onUserUpdated={checkAuth} />
+              )}
+              {user.role === 'user' && (
+                <UserPortal user={user} onUserUpdated={checkAuth} />
+              )}
+            </>
+          )}
+        </Suspense>
       </main>
     </div>
   );

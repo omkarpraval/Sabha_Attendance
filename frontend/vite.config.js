@@ -15,5 +15,32 @@ export default defineConfig({
         changeOrigin: true
       }
     }
+  },
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'vendor-react';
+            }
+            if (id.includes('recharts')) {
+              return 'vendor-charts';
+            }
+            if (id.includes('jspdf') || id.includes('xlsx')) {
+              return 'vendor-reports';
+            }
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons';
+            }
+            if (id.includes('leaflet') || id.includes('html5-qrcode') || id.includes('qrcode')) {
+              return 'vendor-map-qr';
+            }
+            return 'vendor-core';
+          }
+        }
+      }
+    }
   }
 })

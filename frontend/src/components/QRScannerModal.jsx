@@ -161,6 +161,11 @@ export default function QRScannerModal({ onClose, onScanSuccess, activeEvent }) 
   };
 
   const handleQRScanned = (qrText) => {
+    // Haptic vibration feedback on mobile devices
+    if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
+      try { window.navigator.vibrate([100]); } catch (e) {}
+    }
+
     // Read from currentCoordsRef to prevent React stale closure issues
     const coords = currentCoordsRef.current || currentCoords;
     

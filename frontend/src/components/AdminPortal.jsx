@@ -3,7 +3,7 @@ import {
   Shield, Users, MapPin, Calendar, QrCode, FileSpreadsheet, FileText,
   UserCheck, UserX, Plus, CheckCircle2, AlertCircle, Edit, History,
   Lock, RefreshCw, Download, Layers, Award, Trash2, ChevronDown, Filter, X, Sparkles, Clock, Link2, Search, User, Check, XCircle, Printer,
-  Flame, TrendingUp, Activity, BarChart3, PieChart, Zap, BellRing
+  Flame, TrendingUp, Activity, BarChart3, PieChart, Zap, BellRing, Cake, Phone
 } from 'lucide-react';
 import { apiFetch } from '../api';
 import VenueMap from './VenueMap';
@@ -365,7 +365,11 @@ export default function AdminPortal({ user, onUserUpdated }) {
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [userRoleFilter, setUserRoleFilter] = useState('all');
 
-  // Master Attendance Log Grid State
+  // Master Attendance Log & User Management Pagination State
+  const [masterLogPage, setMasterLogPage] = useState(1);
+  const [masterLogRowsPerPage, setMasterLogRowsPerPage] = useState(25);
+  const [userPage, setUserPage] = useState(1);
+  const [userRowsPerPage, setUserRowsPerPage] = useState(25);
   const [masterLogViewMode, setMasterLogViewMode] = useState('events');
   const [selectedDetailModal, setSelectedDetailModal] = useState(null);
   const [masterSearchQuery, setMasterSearchQuery] = useState('');
@@ -462,6 +466,23 @@ export default function AdminPortal({ user, onUserUpdated }) {
     }
   };
 
+  const handleDownloadBackup = async () => {
+    try {
+      const data = await apiFetch('/admin/backup');
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sabha_attendance_backup_${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert("Failed to download database backup: " + err.message);
+    }
+  };
+
   const handleOpenWizard = () => {
     const live = getLiveEventTimes();
     setEventForm(prev => ({
@@ -480,6 +501,46 @@ export default function AdminPortal({ user, onUserUpdated }) {
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(''), 4000);
+  };
+
+  const getRecentBirthdays = () => {
+    if (!allUsers || allUsers.length === 0) return [];
+
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const today = new Date(currentYear, now.getMonth(), now.getDate());
+
+    const results = [];
+
+    for (const u of allUsers) {
+      if (!u.dob) continue;
+
+      const parts = u.dob.split('-');
+      if (parts.length !== 3) continue;
+
+      const birthYear = parseInt(parts[0], 10);
+      const birthMonth = parseInt(parts[1], 10) - 1;
+      const birthDay = parseInt(parts[2], 10);
+
+      if (isNaN(birthYear) || isNaN(birthMonth) || isNaN(birthDay)) continue;
+
+      const bdayThisYear = new Date(currentYear, birthMonth, birthDay);
+      const diffTime = today.getTime() - bdayThisYear.getTime();
+      const diffDays = Math.round(diffTime / (1000 * 3600 * 24));
+
+      if (diffDays >= 0 && diffDays <= 7) {
+        const age = currentYear - birthYear;
+        results.push({
+          user: u,
+          diffDays,
+          isToday: diffDays === 0,
+          age,
+          formattedDob: `${parts[2]}/${parts[1]}/${parts[0]}`
+        });
+      }
+    }
+
+    return results.sort((a, b) => a.diffDays - b.diffDays);
   };
 
   const handleGmapsInputChange = (e) => {
@@ -859,6 +920,14 @@ export default function AdminPortal({ user, onUserUpdated }) {
               <span>Scan My Attendance</span>
             </button>
             <button
+              onClick={handleDownloadBackup}
+              className="bg-[#5B8C5B] hover:bg-[#4A734A] text-white font-semibold text-xs px-3.5 py-2.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer w-full sm:w-auto"
+              title="Download 1-Click JSON Snapshot Backup of Database"
+            >
+              <Download className="w-4 h-4" />
+              <span>Backup Snapshot</span>
+            </button>
+            <button
               onClick={handleOpenWizard}
               className="bg-[#8B3A3A] hover:bg-[#6E2C2C] text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer w-full sm:w-auto"
             >
@@ -968,6 +1037,79 @@ export default function AdminPortal({ user, onUserUpdated }) {
               <p className="text-[11px] text-[#3A322C]/60 mt-1">Highest turnout day of week</p>
             </div>
           </div>
+
+          {/* 1.5 MEMBER BIRTHDAYS CARD (TODAY & PAST 7 DAYS) */}
+          {(() => {
+            const birthdayList = getRecentBirthdays();
+            return (
+              <div className="bg-white rounded-2xl p-6 warm-shadow border border-[#EFE7DA] space-y-4">
+                <div className="flex items-center justify-between border-b border-[#EFE7DA] pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-xl bg-[#E8A33D]/15 text-[#D98A2B]">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-serif-accent text-lg font-bold text-[#8B3A3A] flex items-center gap-2">
+                        <Cake className="w-5 h-5 text-[#8B3A3A]" />
+                        <span>Member Birthday Celebrations</span>
+                        {birthdayList.length > 0 && (
+                          <span className="text-xs bg-[#5B8C5B]/15 text-[#5B8C5B] px-2.5 py-0.5 rounded-full font-sans font-bold">
+                            {birthdayList.length} recent
+                          </span>
+                        )}
+                      </h3>
+                      <p className="text-xs text-[#3A322C]/70">
+                        Members celebrating birthdays today or in the past 7 days
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {birthdayList.length === 0 ? (
+                  <div className="py-6 text-center text-xs text-[#3A322C]/60 italic flex items-center justify-center gap-1.5">
+                    <Calendar className="w-4 h-4 text-[#3A322C]/40" />
+                    <span>No member birthdays today or in the past 7 days.</span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {birthdayList.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className={`p-3.5 rounded-xl border flex items-center justify-between transition-all ${
+                          item.isToday
+                            ? 'bg-[#E8A33D]/10 border-[#E8A33D]/40 shadow-xs'
+                            : 'bg-[#FDFBF7] border-[#EFE7DA]'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center gap-1.5 font-bold text-xs text-[#3A322C]">
+                            <span>{item.user.name}</span>
+                            {item.isToday && (
+                              <span className="px-2 py-0.5 rounded-full text-[9px] bg-[#5B8C5B]/15 text-[#5B8C5B] border border-[#5B8C5B]/30 font-bold uppercase tracking-wider">
+                                Today
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-[#3A322C]/70 mt-0.5 flex items-center gap-1">
+                            <Phone className="w-3 h-3 text-[#8B3A3A]" />
+                            <span>{item.user.phone} • {item.user.member_category === 'goon_bhavi' ? 'Goon Bhavi' : 'Satsangi'}</span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs font-bold text-[#8B3A3A]">
+                            {item.isToday ? `Turning ${item.age}` : `${item.diffDays} day${item.diffDays > 1 ? 's' : ''} ago`}
+                          </div>
+                          <div className="text-[10px] text-[#3A322C]/60 font-mono">
+                            {item.user.dob}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* 2. ACTIVE EVENT BANNER CARD */}
           {activeEvent && (() => {
@@ -1198,28 +1340,37 @@ export default function AdminPortal({ user, onUserUpdated }) {
 
               <div className="grid grid-cols-3 gap-3 text-center mb-3">
                 <div
-                  onClick={() => setSelectedHealthModal({ type: 'super_active', title: 'Super Active Members 🔥 (3+ Streaks)' })}
+                  onClick={() => setSelectedHealthModal({ type: 'super_active', title: 'Super Active Members (3+ Streaks)' })}
                   className="p-3 bg-[#5B8C5B]/10 hover:bg-[#5B8C5B]/20 rounded-xl border border-[#5B8C5B]/30 cursor-pointer transition-all hover:scale-[1.02] shadow-2xs group"
                 >
-                  <div className="text-[10px] text-[#5B8C5B] uppercase font-bold group-hover:underline">Super Active 🔥</div>
+                  <div className="text-[10px] text-[#5B8C5B] uppercase font-bold group-hover:underline flex items-center justify-center gap-1">
+                    <Flame className="w-3 h-3 text-[#5B8C5B]" />
+                    <span>Super Active</span>
+                  </div>
                   <div className="text-2xl font-bold text-[#5B8C5B]">{analyticsData?.member_health?.super_active ?? 0}</div>
                   <div className="text-[10px] text-[#3A322C]/60">3+ Streaks</div>
                 </div>
 
                 <div
-                  onClick={() => setSelectedHealthModal({ type: 'regular', title: 'Regular Members ⚡ (1-2 Streaks)' })}
+                  onClick={() => setSelectedHealthModal({ type: 'regular', title: 'Regular Members (1-2 Streaks)' })}
                   className="p-3 bg-[#E8A33D]/10 hover:bg-[#E8A33D]/20 rounded-xl border border-[#E8A33D]/30 cursor-pointer transition-all hover:scale-[1.02] shadow-2xs group"
                 >
-                  <div className="text-[10px] text-[#E8A33D] uppercase font-bold group-hover:underline">Regular ⚡</div>
+                  <div className="text-[10px] text-[#E8A33D] uppercase font-bold group-hover:underline flex items-center justify-center gap-1">
+                    <Zap className="w-3 h-3 text-[#E8A33D]" />
+                    <span>Regular</span>
+                  </div>
                   <div className="text-2xl font-bold text-[#E8A33D]">{analyticsData?.member_health?.regular ?? 0}</div>
                   <div className="text-[10px] text-[#3A322C]/60">1-2 Streaks</div>
                 </div>
 
                 <div
-                  onClick={() => setSelectedHealthModal({ type: 'at_risk', title: 'At Risk Members ⚠️ (0 Streak)' })}
+                  onClick={() => setSelectedHealthModal({ type: 'at_risk', title: 'At Risk Members (0 Streak)' })}
                   className="p-3 bg-[#C1554A]/10 hover:bg-[#C1554A]/20 rounded-xl border border-[#C1554A]/30 cursor-pointer transition-all hover:scale-[1.02] shadow-2xs group"
                 >
-                  <div className="text-[10px] text-[#C1554A] uppercase font-bold group-hover:underline">At Risk ⚠️</div>
+                  <div className="text-[10px] text-[#C1554A] uppercase font-bold group-hover:underline flex items-center justify-center gap-1">
+                    <AlertCircle className="w-3 h-3 text-[#C1554A]" />
+                    <span>At Risk</span>
+                  </div>
                   <div className="text-2xl font-bold text-[#C1554A]">{analyticsData?.member_health?.at_risk ?? 0}</div>
                   <div className="text-[10px] text-[#3A322C]/60">0 Streak</div>
                 </div>
@@ -1376,7 +1527,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
                 <div className="flex items-center gap-2">
                   <span className={`w-3 h-3 rounded-full ${primaryLiveEvent ? 'bg-[#5B8C5B] animate-ping' : 'bg-gray-300'}`} />
                   <h4 className="font-serif-accent text-xl font-bold text-[#8B3A3A]">
-                    {primaryLiveEvent ? '🔴 Live Event Started Right Now' : '⚪ Live Event Status'}
+                    {primaryLiveEvent ? 'Live Event Started Right Now' : 'Live Event Status'}
                   </h4>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
@@ -1431,16 +1582,16 @@ export default function AdminPortal({ user, onUserUpdated }) {
             </div>
 
             {/* 🔄 SECTION 2: RECURRING EVENTS MASTER SECTION */}
-            <div className="bg-white rounded-2xl p-6 warm-shadow border border-[#EFE7DA] space-y-4">
-              <div className="flex items-center justify-between border-b border-[#EFE7DA] pb-3">
+            <div className="bg-white rounded-2xl p-4 sm:p-6 warm-shadow border border-[#EFE7DA] space-y-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-[#EFE7DA] pb-3">
                 <div className="flex items-center gap-2">
-                  <RefreshCw className="w-5 h-5 text-[#E8A33D]" />
-                  <h4 className="font-serif-accent text-xl font-bold text-[#8B3A3A]">
-                    Master Recurring Events ({recurringGroups.length} Recurring Series)
+                  <RefreshCw className="w-5 h-5 text-[#E8A33D] shrink-0" />
+                  <h4 className="font-serif-accent text-lg sm:text-xl font-bold text-[#8B3A3A]">
+                    Master Recurring Events ({recurringGroups.length})
                   </h4>
                 </div>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] bg-[#E8A33D]/15 text-[#D98A2B] font-bold uppercase tracking-wider">
-                  Reusable QR • Edit & Tenure View
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] bg-[#E8A33D]/15 text-[#D98A2B] font-bold uppercase tracking-wider shrink-0">
+                  Reusable QR • Series View
                 </span>
               </div>
 
@@ -1458,44 +1609,37 @@ export default function AdminPortal({ user, onUserUpdated }) {
                     return (
                       <div
                         key={idx}
-                        className="p-5 rounded-2xl border border-[#EFE7DA] bg-[#FDFBF7] space-y-3 flex flex-col justify-between"
+                        className="p-4 sm:p-5 rounded-2xl border border-[#EFE7DA] bg-[#FDFBF7] space-y-3 flex flex-col justify-between"
                       >
                         <div className="space-y-2">
-                          <div className="flex items-start justify-between gap-2">
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                             <div>
                               <span className="inline-block px-2 py-0.5 rounded text-[9px] bg-[#E8A33D]/20 text-[#D98A2B] font-bold uppercase tracking-wider mb-1">
                                 RECURRING SABHA SERIES
                               </span>
                               <h5 className="font-bold text-base text-[#3A322C]">{masterEv.title}</h5>
                             </div>
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 self-end sm:self-auto">
                               <button
                                 onClick={() => setEditingEvent(masterEv)}
-                                className="bg-[#8B3A3A]/10 hover:bg-[#8B3A3A]/20 text-[#8B3A3A] text-xs font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                                className="bg-[#8B3A3A]/10 hover:bg-[#8B3A3A]/20 text-[#8B3A3A] text-xs font-semibold px-2.5 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
                                 title="Edit Title, Dates or Venue"
                               >
                                 <Edit className="w-3.5 h-3.5" /> Edit
-                              </button>
-                              <button
-                                onClick={() => handleDeleteRecurringSeries(masterEv)}
-                                className="bg-[#C1554A]/10 hover:bg-[#C1554A]/20 text-[#C1554A] text-xs font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
-                                title="Delete Entire Recurring Series & Upcoming Occurrences"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" /> Delete Series
                               </button>
                             </div>
                           </div>
 
                           <div className="text-xs text-[#3A322C]/80 space-y-1">
                             <div className="font-medium flex items-center gap-1.5">
-                              <MapPin className="w-3.5 h-3.5 text-[#8B3A3A]" />
-                              <span>Venue: {masterEv.venue_name || 'Central Mandir'} ({masterEv.venue_radius_meters || 150}m radius)</span>
+                              <MapPin className="w-3.5 h-3.5 text-[#8B3A3A] shrink-0" />
+                              <span className="break-words">Venue: {masterEv.venue_name || 'Central Mandir'} ({masterEv.venue_radius_meters || 150}m radius)</span>
                             </div>
                             <div className="font-medium flex items-center gap-1.5">
-                              <Clock className="w-3.5 h-3.5 text-[#8B3A3A]" />
+                              <Clock className="w-3.5 h-3.5 text-[#8B3A3A] shrink-0" />
                               <span>Timing: {masterEv.start_time} - {masterEv.end_time} IST</span>
                             </div>
-                            <div className="text-[11px] text-[#8B3A3A] font-semibold">
+                            <div className="text-[11px] text-[#8B3A3A] font-semibold break-all">
                               Reusable QR Ref: {masterEv.qr_code_reference}
                             </div>
                           </div>
@@ -1503,10 +1647,10 @@ export default function AdminPortal({ user, onUserUpdated }) {
                           {/* Upcoming Tenure Dates Text Display */}
                           <div className="p-3 rounded-xl bg-white border border-[#EFE7DA] space-y-1">
                             <div className="text-[10px] font-bold uppercase text-[#8B3A3A] tracking-wider flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              <span>Recurring Tenure Dates ({tenureDates.length} Total Occurrences):</span>
+                              <Calendar className="w-3 h-3 shrink-0" />
+                              <span>Tenure Dates ({tenureDates.length} Occurrences):</span>
                             </div>
-                            <p className="text-[11px] text-[#3A322C]/80 font-mono leading-relaxed">
+                            <p className="text-[11px] text-[#3A322C]/80 font-mono leading-relaxed break-words">
                               {upcomingDates.length > 0
                                 ? `Upcoming: ${upcomingDates.slice(0, 6).join(', ')}${upcomingDates.length > 6 ? ` (+${upcomingDates.length - 6} more)` : ''}`
                                 : `Tenure Completed (${tenureDates.join(', ')})`
@@ -1515,16 +1659,16 @@ export default function AdminPortal({ user, onUserUpdated }) {
                           </div>
                         </div>
 
-                        <div className="flex gap-2 pt-2 border-t border-[#EFE7DA]">
+                        <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-[#EFE7DA]">
                           <button
                             onClick={() => handleViewQR(masterEv.id)}
-                            className="flex-1 bg-white hover:bg-[#EFE7DA] text-[#8B3A3A] border border-[#EFE7DA] font-semibold text-xs py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                            className="w-full sm:flex-1 bg-white hover:bg-[#EFE7DA] text-[#8B3A3A] border border-[#EFE7DA] font-semibold text-xs py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
                           >
                             <QrCode className="w-3.5 h-3.5" /> Printable QR
                           </button>
                           <button
                             onClick={() => handleDeleteRecurringSeries(masterEv)}
-                            className="bg-[#C1554A] hover:bg-[#A8453B] text-white font-semibold text-xs py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                            className="w-full sm:flex-1 bg-[#C1554A] hover:bg-[#A8453B] text-white font-semibold text-xs py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
                           >
                             <Trash2 className="w-3.5 h-3.5" /> Delete Series
                           </button>
@@ -1537,15 +1681,15 @@ export default function AdminPortal({ user, onUserUpdated }) {
             </div>
 
             {/* 📜 SECTION 3: COMMON FINISHED & COMPLETED EVENTS ARCHIVE (AT BOTTOM) */}
-            <div className="bg-white rounded-2xl p-6 warm-shadow border border-[#EFE7DA] space-y-4">
-              <div className="flex items-center justify-between border-b border-[#EFE7DA] pb-3">
+            <div className="bg-white rounded-2xl p-4 sm:p-6 warm-shadow border border-[#EFE7DA] space-y-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-[#EFE7DA] pb-3">
                 <div className="flex items-center gap-2">
-                  <History className="w-5 h-5 text-[#3A322C]/60" />
-                  <h4 className="font-serif-accent text-xl font-bold text-[#8B3A3A]">
-                    Common Events & History Archive ({searchedClosedEvents.length})
+                  <History className="w-5 h-5 text-[#3A322C]/60 shrink-0" />
+                  <h4 className="font-serif-accent text-lg sm:text-xl font-bold text-[#8B3A3A]">
+                    Events & History Archive ({searchedClosedEvents.length})
                   </h4>
                 </div>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] bg-[#C1554A]/15 text-[#C1554A] font-bold uppercase tracking-wider">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] bg-[#C1554A]/15 text-[#C1554A] font-bold uppercase tracking-wider shrink-0">
                   Special & Concluded Sabhas
                 </span>
               </div>
@@ -1577,8 +1721,13 @@ export default function AdminPortal({ user, onUserUpdated }) {
                             <MapPin className="w-3.5 h-3.5 text-[#8B3A3A]" />
                             <span>Venue: {ev.venue_name || 'Central Mandir'}</span>
                           </div>
-                          <div className="text-[10px] font-semibold text-[#8B3A3A] pt-0.5">
-                            Type: {ev.qr_mode === 'reusable' ? '🔄 Recurring' : '⚡ Special One-Time'}
+                          <div className="text-[10px] font-semibold text-[#8B3A3A] pt-0.5 flex items-center gap-1">
+                            <span>Type:</span>
+                            {ev.qr_mode === 'reusable' ? (
+                              <span className="inline-flex items-center gap-1 text-[#8B3A3A]"><RefreshCw className="w-3 h-3" /> Recurring</span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[#E8A33D]"><Zap className="w-3 h-3" /> Special One-Time</span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1740,20 +1889,20 @@ export default function AdminPortal({ user, onUserUpdated }) {
                       : 'border-[#EFE7DA] bg-[#FDFBF7]'
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="font-bold text-sm text-[#3A322C] flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                    <div className="space-y-0.5 min-w-0">
+                      <div className="font-bold text-sm text-[#3A322C] flex flex-wrap items-center gap-1.5 leading-snug">
                         <span>{v.name}</span>
                         {editingVenueId === v.id && (
-                          <span className="px-2 py-0.5 rounded-full text-[9px] bg-[#8B3A3A] text-white font-bold uppercase">
+                          <span className="px-2 py-0.5 rounded-full text-[9px] bg-[#8B3A3A] text-white font-bold uppercase shrink-0">
                             EDITING NOW
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-[#3A322C]/70 mt-0.5">{v.address}</div>
+                      {v.address && <div className="text-xs text-[#3A322C]/70 break-words">{v.address}</div>}
                     </div>
 
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0 mt-1 sm:mt-0">
                       <button
                         type="button"
                         onClick={() => handleStartEditVenue(v)}
@@ -2558,8 +2707,8 @@ export default function AdminPortal({ user, onUserUpdated }) {
 
       {/* EVENT CREATION WIZARD MODAL */}
       {showWizard && (
-        <div className="fixed inset-0 z-50 bg-[#3A322C]/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 warm-shadow border border-[#EFE7DA] space-y-4 relative">
+        <div className="fixed inset-0 z-50 bg-[#3A322C]/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-4 sm:p-6 warm-shadow border border-[#EFE7DA] space-y-4 relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => { setShowWizard(false); setWizardStep(1); }}
               className="absolute top-4 right-4 text-[#3A322C]/50 hover:text-[#8B3A3A] cursor-pointer p-1"
@@ -2568,7 +2717,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
               <X className="w-5 h-5" />
             </button>
 
-            <h3 className="font-serif-accent text-2xl font-bold text-[#8B3A3A]">
+            <h3 className="font-serif-accent text-xl sm:text-2xl font-bold text-[#8B3A3A]">
               Event Creation Wizard (Step {wizardStep} of 3)
             </h3>
 
@@ -2577,7 +2726,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
                 {/* Primary Choice: Recurring vs One-Time Special Event */}
                 <div>
                   <label className="block text-xs font-semibold text-[#3A322C] mb-1.5">Select Event Category</label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => setEventForm(prev => ({ ...prev, event_type: 'recurring', qr_mode: 'reusable' }))}
@@ -2588,7 +2737,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
                       }`}
                     >
                       <div className="font-bold text-xs flex items-center gap-1.5">
-                        <RefreshCw className="w-3.5 h-3.5" />
+                        <RefreshCw className="w-3.5 h-3.5 shrink-0" />
                         <span>Recurring Weekly Event</span>
                       </div>
                       <div className={`text-[10px] mt-1 ${eventForm.event_type === 'recurring' ? 'text-white/80' : 'text-[#3A322C]/60'}`}>
@@ -2606,7 +2755,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
                       }`}
                     >
                       <div className="font-bold text-xs flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5" />
+                        <Calendar className="w-3.5 h-3.5 shrink-0" />
                         <span>One-Time Special Event</span>
                       </div>
                       <div className={`text-[10px] mt-1 ${eventForm.event_type === 'one_time' ? 'text-white/80' : 'text-[#3A322C]/60'}`}>
@@ -2629,7 +2778,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
 
                 {eventForm.event_type === 'recurring' ? (
                   <div className="space-y-3 p-3 rounded-xl bg-[#FDFBF7] border border-[#EFE7DA]">
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div>
                         <label className="block text-xs font-semibold text-[#3A322C] mb-1">Day of Week</label>
                         <select
@@ -2699,7 +2848,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
                 )}
 
                 <div>
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 mb-1">
                     <label className="block text-xs font-semibold text-[#3A322C]">Start & End Time (IST)</label>
                     <button
                       type="button"
@@ -2717,8 +2866,8 @@ export default function AdminPortal({ user, onUserUpdated }) {
                       <Clock className="w-3 h-3" /> Reset to Current Live Clock
                     </button>
                   </div>
-                  <div className="flex gap-2">
-                    <div className="w-1/2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="w-full">
                       <label className="block text-[11px] text-[#3A322C]/70 mb-0.5">Start Time (IST)</label>
                       <input
                         type="time"
@@ -2727,7 +2876,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
                         className="w-full p-2.5 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-xs font-semibold"
                       />
                     </div>
-                    <div className="w-1/2">
+                    <div className="w-full">
                       <label className="block text-[11px] text-[#3A322C]/70 mb-0.5">End Time (IST)</label>
                       <input
                         type="time"
@@ -3035,8 +3184,9 @@ export default function AdminPortal({ user, onUserUpdated }) {
                         </div>
                         <div>
                           <h5 className="font-bold text-sm text-[#3A322C]">{m.name}</h5>
-                          <p className="text-xs text-[#3A322C]/70">
-                            📞 {m.phone} • Category: <span className="font-semibold text-[#8B3A3A]">{m.member_category || 'Satsangi'}</span>
+                          <p className="text-xs text-[#3A322C]/70 flex items-center gap-1">
+                            <Phone className="w-3 h-3 text-[#8B3A3A]" />
+                            <span>{m.phone} • Category: <span className="font-semibold text-[#8B3A3A]">{m.member_category || 'Satsangi'}</span></span>
                           </p>
                         </div>
                       </div>

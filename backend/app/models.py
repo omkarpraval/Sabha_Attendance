@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, Enum
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, Enum, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -45,9 +45,9 @@ class User(Base):
     name = Column(String, nullable=False)
     dob = Column(String, nullable=True)
     hashed_password = Column(String, nullable=False)
-    role = Column(String, default=UserRole.USER, nullable=False)
-    status = Column(String, default=UserStatus.APPROVED, nullable=False)
-    member_category = Column(String, default=MemberCategory.SATSANGI, nullable=False)
+    role = Column(String, default=UserRole.USER, index=True, nullable=False)
+    status = Column(String, default=UserStatus.APPROVED, index=True, nullable=False)
+    member_category = Column(String, default=MemberCategory.SATSANGI, index=True, nullable=False)
     current_streak = Column(Integer, default=0)
     lifetime_count = Column(Integer, default=0)
     reset_token_hash = Column(String, nullable=True)
@@ -76,14 +76,14 @@ class Event(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
-    event_date = Column(String, nullable=False)  # YYYY-MM-DD
+    event_date = Column(String, index=True, nullable=False)  # YYYY-MM-DD
     start_time = Column(String, nullable=False)  # HH:MM (24h)
     end_time = Column(String, nullable=False)    # HH:MM (24h)
-    venue_id = Column(Integer, ForeignKey("venues.id"), nullable=False)
+    venue_id = Column(Integer, ForeignKey("venues.id"), index=True, nullable=False)
     qr_mode = Column(String, default=QRMode.REUSABLE, nullable=False)
     qr_code_reference = Column(String, index=True, nullable=False)  # Non-unique to allow reusable venue QR reference across events
-    status = Column(String, default=EventStatus.OPEN, nullable=False)
-    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    status = Column(String, default=EventStatus.OPEN, index=True, nullable=False)
+    created_by_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     venue = relationship("Venue", back_populates="events")
@@ -92,13 +92,16 @@ class Event(Base):
 
 class Attendance(Base):
     __tablename__ = "attendances"
+    __table_args__ = (
+        UniqueConstraint('event_id', 'user_id', name='uq_event_user_attendance'),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
-    event_id = Column(Integer, ForeignKey("events.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    status = Column(String, nullable=False)  # present, absent, excused
-    marked_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    marking_method = Column(String, nullable=False)  # self_qr, karyakar_manual, admin_manual, auto_absent
+    event_id = Column(Integer, ForeignKey("events.id"), index=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    status = Column(String, index=True, nullable=False)  # present, absent, excused
+    marked_by_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=True)
+    marking_method = Column(String, index=True, nullable=False)  # self_qr, karyakar_manual, admin_manual, auto_absent
     excuse_reason = Column(Text, nullable=True)
     user_lat = Column(Float, nullable=True)
     user_long = Column(Float, nullable=True)
@@ -114,8 +117,8 @@ class AttendanceAudit(Base):
     __tablename__ = "attendance_audits"
 
     id = Column(Integer, primary_key=True, index=True)
-    attendance_id = Column(Integer, ForeignKey("attendances.id"), nullable=False)
-    modified_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    attendance_id = Column(Integer, ForeignKey("attendances.id"), index=True, nullable=False)
+    modified_by_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
     old_status = Column(String, nullable=False)
     new_status = Column(String, nullable=False)
     reason = Column(Text, nullable=False)
@@ -128,7 +131,7 @@ class PushSubscription(Base):
     __tablename__ = "push_subscriptions"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
     endpoint = Column(Text, nullable=False)
     p256dh = Column(Text, nullable=False)
     auth = Column(Text, nullable=False)

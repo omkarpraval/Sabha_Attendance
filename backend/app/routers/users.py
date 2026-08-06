@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import User, UserStatus, UserRole, MemberCategory, Attendance, AttendanceAudit, Event, PushSubscription
-from app.schemas import UserResponse, UserCreateByAdmin, UserUpdateByAdmin
+from app.schemas import UserResponse, UserCreateByAdmin, UserUpdateByAdmin, BulkUserImportRequest, BulkUserImportResponse
 from app.auth import get_current_user, require_admin, require_karyakar_or_admin, hash_password
 
 router = APIRouter(prefix="/api/users", tags=["Users"])
@@ -15,6 +15,8 @@ def search_users(
     role: Optional[str] = Query(None),
     member_category: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
+    limit: Optional[int] = Query(None),
+    offset: Optional[int] = Query(0),
     current_user: User = Depends(require_karyakar_or_admin),
     db: Session = Depends(get_db)
 ):
@@ -33,7 +35,21 @@ def search_users(
             (User.phone.ilike(search_pattern)) |
             (User.email.ilike(search_pattern))
         )
-    return db_query.order_by(User.name.asc()).all()
+    db_query = db_query.order_by(User.name.asc())
+    if limit is not None and limit > 0:
+        db_query = db_query.offset(offset or 0).limit(limit)
+    return db_query.all()
+
+@router.get("/leadership", response_model=List[UserResponse])
+def get_leadership_contacts(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Return all Admins and Karyakars contact directory (Accessible by all logged-in members)."""
+    return db.query(User).filter(
+        User.role.in_([UserRole.ADMIN, UserRole.KARYAKAR]),
+        User.status == UserStatus.APPROVED
+    ).order_by(User.role.asc(), User.name.asc()).all()
 
 @router.post("", response_model=UserResponse)
 def create_user_by_admin(
@@ -73,6 +89,57 @@ def create_user_by_admin(
     db.commit()
     db.refresh(new_user)
     return new_user
+
+@router.post("/bulk-import", response_model=BulkUserImportResponse)
+def bulk_import_users(
+    req: BulkUserImportRequest,
+    current_user: User = Depends(require_karyakar_or_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Bulk import members from CSV/Excel batch.
+    If password is blank/omitted, automatically hashes the member's PHONE NUMBER as their initial password!
+    """
+    created_count = 0
+    skipped_count = 0
+    skipped_phones = []
+
+    existing_phones = set(u[0] for u in db.query(User.phone).all() if u[0])
+
+    for u_item in req.users:
+        clean_phone = u_item.phone.strip() if u_item.phone else ""
+        if not clean_phone or clean_phone in existing_phones:
+            skipped_count += 1
+            if clean_phone:
+                skipped_phones.append(clean_phone)
+            continue
+
+        raw_pwd = u_item.password.strip() if (u_item.password and u_item.password.strip()) else clean_phone
+        category = u_item.member_category if u_item.member_category in [MemberCategory.SATSANGI, MemberCategory.GOON_BHAVI] else MemberCategory.SATSANGI
+        role = u_item.role if u_item.role in [UserRole.USER, UserRole.KARYAKAR, UserRole.ADMIN] else UserRole.USER
+
+        new_user = User(
+            phone=clean_phone,
+            email=u_item.email.strip() if u_item.email else None,
+            name=u_item.name.strip(),
+            dob=u_item.dob.strip() if u_item.dob else None,
+            hashed_password=hash_password(raw_pwd),
+            role=role,
+            status=UserStatus.APPROVED,
+            member_category=category,
+            current_streak=0,
+            lifetime_count=0
+        )
+        db.add(new_user)
+        existing_phones.add(clean_phone)
+        created_count += 1
+
+    db.commit()
+    return BulkUserImportResponse(
+        created_count=created_count,
+        skipped_count=skipped_count,
+        skipped_phones=skipped_phones
+    )
 
 @router.put("/{user_id}", response_model=UserResponse)
 def update_user_by_admin(

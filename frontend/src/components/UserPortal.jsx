@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { QrCode, Flame, Calendar as CalendarIcon, CheckCircle2, Clock, MapPin, AlertCircle, Sparkles, Send, BarChart3, TrendingUp, Award, PieChart } from 'lucide-react';
+import { QrCode, Flame, Calendar as CalendarIcon, CheckCircle2, Clock, MapPin, AlertCircle, Sparkles, Send, BarChart3, TrendingUp, Award, PieChart, Shield, Phone, PhoneCall, Mail, ChevronDown, Filter } from 'lucide-react';
 import { apiFetch } from '../api';
+import { saveOfflineScan } from '../utils/offlineQueue';
 import QRScannerModal from './QRScannerModal';
 
 export default function UserPortal({ user, onUserUpdated }) {
@@ -8,6 +9,11 @@ export default function UserPortal({ user, onUserUpdated }) {
   const [isTodayEvent, setIsTodayEvent] = useState(false);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [history, setHistory] = useState([]);
+  const [historyVisibleCount, setHistoryVisibleCount] = useState(5);
+  const [timeRange, setTimeRange] = useState('6m'); // '1m', '4m', '6m', '1y', 'custom'
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+  const [leadership, setLeadership] = useState([]);
   const [showScanner, setShowScanner] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const [scanError, setScanError] = useState(null);
@@ -50,6 +56,14 @@ export default function UserPortal({ user, onUserUpdated }) {
       // Fetch user's attendance history
       const hist = await apiFetch('/attendance/history');
       setHistory(hist);
+
+      // Fetch Admins and Karyakars contact directory
+      try {
+        const leadData = await apiFetch('/users/leadership');
+        setLeadership(leadData);
+      } catch (e) {
+        console.warn("Could not fetch leadership contacts:", e);
+      }
     } catch (err) {
       console.error("Error loading portal data:", err);
     } finally {
@@ -57,26 +71,76 @@ export default function UserPortal({ user, onUserUpdated }) {
     }
   };
 
+  const getFilteredHistory = () => {
+    if (!history || history.length === 0) return [];
+    if (timeRange === 'all') return history;
+
+    const now = new Date();
+    let cutoffDate = new Date();
+
+    if (timeRange === '1m') {
+      cutoffDate.setMonth(now.getMonth() - 1);
+    } else if (timeRange === '4m') {
+      cutoffDate.setMonth(now.getMonth() - 4);
+    } else if (timeRange === '6m') {
+      cutoffDate.setMonth(now.getMonth() - 6);
+    } else if (timeRange === '1y') {
+      cutoffDate.setFullYear(now.getFullYear() - 1);
+    } else if (timeRange === 'custom') {
+      const start = customStartDate ? new Date(customStartDate) : new Date(0);
+      const end = customEndDate ? new Date(customEndDate + 'T23:59:59') : new Date();
+      return history.filter(h => {
+        const dStr = h.timestamp_utc || h.event_date;
+        if (!dStr) return false;
+        const itemDate = new Date(dStr);
+        return itemDate >= start && itemDate <= end;
+      });
+    }
+
+    return history.filter(h => {
+      const dStr = h.timestamp_utc || h.event_date;
+      if (!dStr) return false;
+      return new Date(dStr) >= cutoffDate;
+    });
+  };
+
   const handleScanSuccess = async (qrRef, lat, lng) => {
     setShowScanner(false);
     setScanError(null);
     setScanResult(null);
 
+    const scanPayload = { qr_code_reference: qrRef, latitude: lat, longitude: lng };
+
+    if (!navigator.onLine) {
+      await saveOfflineScan(scanPayload);
+      setScanResult({
+        event_title: "Offline Scan Saved",
+        status: "saved_offline",
+        marked_by_name: "Saved to Offline Queue (Will auto-sync when online)"
+      });
+      return;
+    }
+
     try {
       const res = await apiFetch('/attendance/scan', {
         method: 'POST',
-        body: JSON.stringify({
-          qr_code_reference: qrRef,
-          latitude: lat,
-          longitude: lng
-        })
+        body: JSON.stringify(scanPayload)
       });
 
       setScanResult(res);
       loadUserPortalData();
       if (onUserUpdated) onUserUpdated();
     } catch (err) {
-      setScanError(err.message);
+      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError') || !navigator.onLine) {
+        await saveOfflineScan(scanPayload);
+        setScanResult({
+          event_title: "Offline Scan Saved",
+          status: "saved_offline",
+          marked_by_name: "Network weak. Scan saved to Offline Queue (Auto-syncs on reconnect)"
+        });
+      } else {
+        setScanError(err.message);
+      }
     }
   };
 
@@ -272,91 +336,221 @@ export default function UserPortal({ user, onUserUpdated }) {
         )}
       </div>
 
-      {/* PERSONAL ATTENDANCE RECORD (GRAPH / PERCENTAGE) */}
-      <div className="bg-white rounded-2xl p-6 warm-shadow border border-[#EFE7DA] space-y-5">
-        <div className="flex items-center justify-between border-b border-[#EFE7DA] pb-3">
-          <div className="flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-[#8B3A3A]" />
-            <div>
-              <h3 className="font-serif-accent text-lg font-bold text-[#8B3A3A]">
-                Personal Attendance Record & Analytics
-              </h3>
-              <p className="text-xs text-[#3A322C]/70 font-medium">Your historical turnout percentage and monthly streak graph</p>
+      {/* PERSONAL ATTENDANCE RECORD (GRAPH / PERCENTAGE & FILTERS) */}
+      {(() => {
+        const filteredData = getFilteredHistory();
+        const presentCount = filteredData.filter(h => h.status === 'present').length;
+        const absentCount = filteredData.filter(h => h.status === 'absent').length;
+        const excusedCount = filteredData.filter(h => h.status === 'excused').length;
+        const turnoutPct = filteredData.length > 0 ? Math.round((presentCount / filteredData.length) * 100) : 100;
+
+        return (
+          <div className="bg-white rounded-2xl p-4 sm:p-6 warm-shadow border border-[#EFE7DA] space-y-5">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 border-b border-[#EFE7DA] pb-4">
+              <div className="flex items-center justify-between w-full md:w-auto">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-[#8B3A3A] shrink-0" />
+                  <div>
+                    <h3 className="font-serif-accent text-base sm:text-lg font-bold text-[#8B3A3A]">
+                      Personal Attendance Analytics
+                    </h3>
+                    <p className="text-[11px] sm:text-xs text-[#3A322C]/70 font-medium">Turnout percentage and monthly streak breakdown</p>
+                  </div>
+                </div>
+
+                <div className="flex md:hidden items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#5B8C5B]/15 text-[#5B8C5B] font-bold text-xs shrink-0">
+                  <Award className="w-3.5 h-3.5" />
+                  <span>{turnoutPct}%</span>
+                </div>
+              </div>
+
+              {/* Time Range Filter Controls - Mobile Responsive Scroll / Grid */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+                <div className="w-full overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                  <div className="flex items-center gap-1 bg-[#FDFBF7] p-1 rounded-xl border border-[#EFE7DA] text-xs font-semibold min-w-max">
+                    <button
+                      onClick={() => setTimeRange('1m')}
+                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                        timeRange === '1m' ? 'bg-[#8B3A3A] text-white shadow-2xs' : 'text-[#3A322C]/70 hover:text-[#8B3A3A]'
+                      }`}
+                    >
+                      1 Month
+                    </button>
+                    <button
+                      onClick={() => setTimeRange('4m')}
+                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                        timeRange === '4m' ? 'bg-[#8B3A3A] text-white shadow-2xs' : 'text-[#3A322C]/70 hover:text-[#8B3A3A]'
+                      }`}
+                    >
+                      4 Months
+                    </button>
+                    <button
+                      onClick={() => setTimeRange('6m')}
+                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                        timeRange === '6m' ? 'bg-[#8B3A3A] text-white shadow-2xs' : 'text-[#3A322C]/70 hover:text-[#8B3A3A]'
+                      }`}
+                    >
+                      6 Months
+                    </button>
+                    <button
+                      onClick={() => setTimeRange('1y')}
+                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                        timeRange === '1y' ? 'bg-[#8B3A3A] text-white shadow-2xs' : 'text-[#3A322C]/70 hover:text-[#8B3A3A]'
+                      }`}
+                    >
+                      1 Year
+                    </button>
+                    <button
+                      onClick={() => setTimeRange('custom')}
+                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                        timeRange === 'custom' ? 'bg-[#8B3A3A] text-white shadow-2xs' : 'text-[#3A322C]/70 hover:text-[#8B3A3A]'
+                      }`}
+                    >
+                      <CalendarIcon className="w-3 h-3" />
+                      <span>Custom</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#5B8C5B]/15 text-[#5B8C5B] font-bold text-xs shrink-0">
+                  <Award className="w-4 h-4" />
+                  <span>{turnoutPct}% Rate</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Custom Date Range Inputs */}
+            {timeRange === 'custom' && (
+              <div className="p-3 bg-[#FDFBF7] rounded-xl border border-[#EFE7DA] flex flex-col sm:flex-row items-center gap-3 text-xs">
+                <span className="font-semibold text-[#8B3A3A] flex items-center gap-1">
+                  <Filter className="w-3.5 h-3.5" /> Select Date Window:
+                </span>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <label className="text-[#3A322C]/70 font-medium">From:</label>
+                  <input
+                    type="date"
+                    value={customStartDate}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                    className="px-2.5 py-1.5 rounded-lg border border-[#EFE7DA] bg-white text-xs text-[#3A322C]"
+                  />
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <label className="text-[#3A322C]/70 font-medium">To:</label>
+                  <input
+                    type="date"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    className="px-2.5 py-1.5 rounded-lg border border-[#EFE7DA] bg-white text-xs text-[#3A322C]"
+                  />
+                </div>
+                {(customStartDate || customEndDate) && (
+                  <button
+                    onClick={() => { setCustomStartDate(''); setCustomEndDate(''); }}
+                    className="text-[11px] text-[#C1554A] underline cursor-pointer"
+                  >
+                    Reset Dates
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Attendance Summary Stat Cards */}
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="p-3 bg-[#5B8C5B]/10 rounded-xl border border-[#5B8C5B]/20">
+                <div className="text-[11px] text-[#5B8C5B] font-bold uppercase">Present</div>
+                <div className="text-xl font-bold text-[#5B8C5B]">{presentCount}</div>
+                <div className="text-[10px] text-[#3A322C]/60 font-medium">Sabhas Attended</div>
+              </div>
+
+              <div className="p-3 bg-[#C1554A]/10 rounded-xl border border-[#C1554A]/20">
+                <div className="text-[11px] text-[#C1554A] font-bold uppercase">Absent</div>
+                <div className="text-xl font-bold text-[#C1554A]">{absentCount}</div>
+                <div className="text-[10px] text-[#3A322C]/60 font-medium">Missed Sessions</div>
+              </div>
+
+              <div className="p-3 bg-[#E8A33D]/10 rounded-xl border border-[#E8A33D]/20">
+                <div className="text-[11px] text-[#E8A33D] font-bold uppercase">Excused</div>
+                <div className="text-xl font-bold text-[#E8A33D]">{excusedCount}</div>
+                <div className="text-[10px] text-[#3A322C]/60 font-medium">Prior Informed</div>
+              </div>
+            </div>
+
+            {/* Monthly Attendance Percentage Graph Bars */}
+            <div className="space-y-3 pt-1">
+              <div className="text-xs font-semibold text-[#8B3A3A] flex items-center justify-between">
+                <span>Monthly Attendance Progress (%)</span>
+                <span className="text-[11px] text-[#3A322C]/60 font-medium uppercase tracking-wider font-mono">
+                  {timeRange === '1m' ? 'Last 1 Month' : timeRange === '4m' ? 'Last 4 Months' : timeRange === '6m' ? 'Last 6 Months' : timeRange === '1y' ? 'Last 1 Year' : 'Custom Window'}
+                </span>
+              </div>
+
+              {(() => {
+                const monthlyMap = {};
+                filteredData.forEach(h => {
+                  const dateStr = h.timestamp_utc || h.event_date;
+                  if (!dateStr) return;
+                  const key = dateStr.substring(0, 7);
+                  const label = new Date(dateStr).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                  if (!monthlyMap[key]) monthlyMap[key] = { label, total: 0, present: 0 };
+                  monthlyMap[key].total += 1;
+                  if (h.status === 'present') monthlyMap[key].present += 1;
+                });
+
+                const months = Object.values(monthlyMap);
+                if (months.length === 0) {
+                  return (
+                    <div className="py-4 text-center text-xs text-[#3A322C]/60 italic">
+                      No attendance data found for the selected time window.
+                    </div>
+                  );
+                }
+
+                return months.map((m, i) => {
+                  const pct = Math.round((m.present / m.total) * 100);
+                  return (
+                    <div key={i} className="space-y-1">
+                      <div className="flex justify-between text-xs font-medium text-[#3A322C]">
+                        <span>{m.label}</span>
+                        <span className="font-mono text-[#5B8C5B] font-bold">{pct}% ({m.present}/{m.total} Sabhas)</span>
+                      </div>
+                      <div className="w-full bg-[#EFE7DA]/60 h-2.5 rounded-full overflow-hidden">
+                        <div
+                          className="bg-gradient-to-r from-[#5B8C5B] to-[#8B3A3A] h-full rounded-full transition-all duration-300"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
             </div>
           </div>
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#5B8C5B]/15 text-[#5B8C5B] font-bold text-xs">
-            <Award className="w-4 h-4" />
-            <span>{history.length > 0 ? Math.round((history.filter(h => h.status === 'present').length / history.length) * 100) : 100}% Rate</span>
-          </div>
-        </div>
+        );
+      })()}
 
-        {/* Attendance Summary Stat Cards */}
-        <div className="grid grid-cols-3 gap-3 text-center">
-          <div className="p-3 bg-[#5B8C5B]/10 rounded-xl border border-[#5B8C5B]/20">
-            <div className="text-[11px] text-[#5B8C5B] font-bold uppercase">Present</div>
-            <div className="text-xl font-bold text-[#5B8C5B]">{history.filter(h => h.status === 'present').length}</div>
-            <div className="text-[10px] text-[#3A322C]/60 font-medium">Sabhas Attended</div>
-          </div>
+      {/* Upcoming Events & Pre-mark Excused Option */}
+      <div className="bg-white rounded-2xl p-6 warm-shadow border border-[#EFE7DA]">
+        <h3 className="font-serif-accent text-xl font-bold text-[#8B3A3A] mb-3">
+          Upcoming Sabha Sessions
+        </h3>
+        <div className="space-y-3">
+          {upcomingEvents.map((ev) => (
+            <div key={ev.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7]">
+              <div>
+                <h4 className="font-semibold text-sm text-[#3A322C]">{ev.title}</h4>
+                <p className="text-xs text-[#3A322C]/60 mt-0.5">
+                  {ev.event_date} ({ev.start_time} - {ev.end_time} IST) • {ev.venue_name || 'Central Mandir'}
+                </p>
+              </div>
 
-          <div className="p-3 bg-[#C1554A]/10 rounded-xl border border-[#C1554A]/20">
-            <div className="text-[11px] text-[#C1554A] font-bold uppercase">Absent</div>
-            <div className="text-xl font-bold text-[#C1554A]">{history.filter(h => h.status === 'absent').length}</div>
-            <div className="text-[10px] text-[#3A322C]/60 font-medium">Missed Sessions</div>
-          </div>
-
-          <div className="p-3 bg-[#E8A33D]/10 rounded-xl border border-[#E8A33D]/20">
-            <div className="text-[11px] text-[#E8A33D] font-bold uppercase">Excused</div>
-            <div className="text-xl font-bold text-[#E8A33D]">{history.filter(h => h.status === 'excused').length}</div>
-            <div className="text-[10px] text-[#3A322C]/60 font-medium">Prior Informed</div>
-          </div>
-        </div>
-
-        {/* Monthly Attendance Percentage Graph Bars */}
-        <div className="space-y-3 pt-1">
-          <div className="text-xs font-semibold text-[#8B3A3A] flex items-center justify-between">
-            <span>Monthly Attendance Progress (%)</span>
-            <span className="text-[11px] text-[#3A322C]/60 font-medium">Last 6 Months</span>
-          </div>
-
-          {(() => {
-            const monthlyMap = {};
-            history.forEach(h => {
-              const dateStr = h.timestamp_utc || h.event_date;
-              if (!dateStr) return;
-              const key = dateStr.substring(0, 7);
-              const label = new Date(dateStr).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-              if (!monthlyMap[key]) monthlyMap[key] = { label, total: 0, present: 0 };
-              monthlyMap[key].total += 1;
-              if (h.status === 'present') monthlyMap[key].present += 1;
-            });
-
-            const months = Object.values(monthlyMap).slice(0, 6);
-            if (months.length === 0) {
-              return (
-                <div className="py-4 text-center text-xs text-[#3A322C]/60 italic">
-                  Attendance data graph will appear after your first Sabha scan.
-                </div>
-              );
-            }
-
-            return months.map((m, i) => {
-              const pct = Math.round((m.present / m.total) * 100);
-              return (
-                <div key={i} className="space-y-1">
-                  <div className="flex justify-between text-xs font-medium text-[#3A322C]">
-                    <span>{m.label}</span>
-                    <span className="font-mono text-[#5B8C5B] font-bold">{pct}% ({m.present}/{m.total} Sabhas)</span>
-                  </div>
-                  <div className="w-full bg-[#EFE7DA]/60 h-2.5 rounded-full overflow-hidden">
-                    <div
-                      className="bg-gradient-to-r from-[#5B8C5B] to-[#8B3A3A] h-full rounded-full transition-all duration-300"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            });
-          })()}
+              <button
+                onClick={() => setExcuseModalEvent(ev)}
+                className="text-xs bg-white hover:bg-[#D9B166]/20 text-[#D9B166] border border-[#D9B166] font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer self-end sm:self-auto"
+              >
+                Pre-mark Excused
+              </button>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -385,69 +579,125 @@ export default function UserPortal({ user, onUserUpdated }) {
               No attendance records found yet. Scan your first QR code above!
             </div>
           ) : (
-            history.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between p-3.5 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] hover:bg-white transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`w-3.5 h-3.5 rounded-full shrink-0 ${
-                    item.status === 'present' ? 'bg-[#5B8C5B]' :
-                    item.status === 'absent' ? 'bg-[#C1554A]' : 'bg-[#D9B166]'
-                  }`}></div>
-                  <div>
-                    <div className="font-semibold text-sm text-[#3A322C]">
-                      {item.event_title}
-                    </div>
-                    <div className="text-xs text-[#3A322C]/60">
-                      {item.event_date} {item.timestamp_utc ? `at ${formatISTTime(item.timestamp_utc)}` : ''} • Marked by: {item.marked_by_name}
+            <>
+              {history.slice(0, historyVisibleCount).map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between p-3.5 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] hover:bg-white transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-3.5 h-3.5 rounded-full shrink-0 ${
+                      item.status === 'present' ? 'bg-[#5B8C5B]' :
+                      item.status === 'absent' ? 'bg-[#C1554A]' : 'bg-[#D9B166]'
+                    }`}></div>
+                    <div>
+                      <div className="font-semibold text-sm text-[#3A322C]">
+                        {item.event_title}
+                      </div>
+                      <div className="text-xs text-[#3A322C]/60">
+                        {item.event_date} {item.timestamp_utc ? `at ${formatISTTime(item.timestamp_utc)}` : ''} • Marked by: {item.marked_by_name}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="text-right">
-                  <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${
-                    item.status === 'present' ? 'bg-[#5B8C5B]/15 text-[#5B8C5B]' :
-                    item.status === 'absent' ? 'bg-[#C1554A]/15 text-[#C1554A]' : 'bg-[#D9B166]/20 text-[#D9B166]'
-                  }`}>
-                    {item.status}
-                  </span>
-                  {item.excuse_reason && (
-                    <div className="text-[11px] text-[#3A322C]/60 italic mt-0.5">
-                      "{item.excuse_reason}"
-                    </div>
-                  )}
+                  <div className="text-right">
+                    <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${
+                      item.status === 'present' ? 'bg-[#5B8C5B]/15 text-[#5B8C5B]' :
+                      item.status === 'absent' ? 'bg-[#C1554A]/15 text-[#C1554A]' : 'bg-[#D9B166]/20 text-[#D9B166]'
+                    }`}>
+                      {item.status}
+                    </span>
+                    {item.excuse_reason && (
+                      <div className="text-[11px] text-[#3A322C]/60 italic mt-0.5">
+                        "{item.excuse_reason}"
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))
+              ))}
+
+              {history.length > historyVisibleCount && (
+                <div className="pt-3 text-center">
+                  <button
+                    onClick={() => setHistoryVisibleCount(prev => prev + 10)}
+                    className="px-5 py-2.5 rounded-xl bg-[#FDFBF7] hover:bg-[#EFE7DA] text-[#8B3A3A] font-semibold text-xs border border-[#EFE7DA] transition-all cursor-pointer shadow-2xs hover:shadow-xs active:scale-98 flex items-center justify-center gap-1.5 mx-auto"
+                  >
+                    <ChevronDown className="w-4 h-4" />
+                    <span>Show More ({history.length - historyVisibleCount} remaining)</span>
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
 
-      {/* Upcoming Events & Pre-mark Excused Option */}
+      {/* Leadership & Karyakar Contact Directory Card */}
       <div className="bg-white rounded-2xl p-6 warm-shadow border border-[#EFE7DA]">
-        <h3 className="font-serif-accent text-xl font-bold text-[#8B3A3A] mb-3">
-          Upcoming Sabha Sessions
-        </h3>
-        <div className="space-y-3">
-          {upcomingEvents.map((ev) => (
-            <div key={ev.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7]">
-              <div>
-                <h4 className="font-semibold text-sm text-[#3A322C]">{ev.title}</h4>
-                <p className="text-xs text-[#3A322C]/60 mt-0.5">
-                  {ev.event_date} ({ev.start_time} - {ev.end_time} IST) • {ev.venue_name || 'Central Mandir'}
-                </p>
-              </div>
-
-              <button
-                onClick={() => setExcuseModalEvent(ev)}
-                className="text-xs bg-white hover:bg-[#D9B166]/20 text-[#D9B166] border border-[#D9B166] font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer self-end sm:self-auto"
-              >
-                Pre-mark Excused
-              </button>
+        <div className="flex items-center justify-between border-b border-[#EFE7DA] pb-3 mb-4">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-[#8B3A3A]/10 text-[#8B3A3A]">
+              <Shield className="w-5 h-5" />
             </div>
-          ))}
+            <div>
+              <h3 className="font-serif-accent text-xl font-bold text-[#8B3A3A]">
+                Sabha Administration & Karyakar Contacts
+              </h3>
+              <p className="text-xs text-[#3A322C]/70">
+                Reach out to any Karyakar or Admin for attendance assistance, guidance, or queries
+              </p>
+            </div>
+          </div>
         </div>
+
+        {leadership.length === 0 ? (
+          <div className="py-6 text-center text-xs text-[#3A322C]/60 italic">
+            No administration contacts available.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {leadership.map((person) => (
+              <div
+                key={person.id}
+                className="p-4 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] flex items-center justify-between gap-3 hover:border-[#8B3A3A]/40 transition-all hover:shadow-2xs"
+              >
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm text-[#3A322C] truncate">{person.name}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider shrink-0 ${
+                      person.role === 'admin'
+                        ? 'bg-[#8B3A3A]/15 text-[#8B3A3A]'
+                        : 'bg-[#E8A33D]/20 text-[#D98A2B]'
+                    }`}>
+                      {person.role}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-xs text-[#3A322C]/70 font-mono">
+                    <Phone className="w-3.5 h-3.5 text-[#8B3A3A] shrink-0" />
+                    <span>{person.phone}</span>
+                  </div>
+
+                  {person.email && (
+                    <div className="flex items-center gap-1.5 text-[11px] text-[#3A322C]/60 font-mono truncate">
+                      <Mail className="w-3 h-3 text-[#3A322C]/50 shrink-0" />
+                      <span className="truncate">{person.email}</span>
+                    </div>
+                  )}
+                </div>
+
+                <a
+                  href={`tel:${person.phone}`}
+                  className="px-3 py-2 rounded-xl bg-[#8B3A3A] hover:bg-[#722F2F] text-white text-xs font-semibold shadow-2xs transition-all shrink-0 flex items-center gap-1 cursor-pointer active:scale-95"
+                  title={`Call ${person.name}`}
+                >
+                  <PhoneCall className="w-3.5 h-3.5" />
+                  <span>Call</span>
+                </a>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* QR Camera Scanner Modal */}

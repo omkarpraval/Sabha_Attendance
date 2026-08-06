@@ -30,41 +30,6 @@ export default function Header({ user, onLogout, onSwitchAccount, onInstallPWA, 
               <span className="capitalize">{user.role}</span>
             </div>
 
-            {/* Quick Demo Switcher */}
-            <div className="relative group">
-              <button 
-                className="flex items-center gap-1.5 text-xs bg-[#FDFBF7] hover:bg-[#EFE7DA] text-[#8B3A3A] font-semibold px-2.5 py-1.5 rounded-lg border border-[#EFE7DA] transition-all cursor-pointer"
-                title="Switch Demo Role"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span className="hidden md:inline">Switch Account</span>
-              </button>
-
-              <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-lg border border-[#EFE7DA] py-1 hidden group-hover:block z-50">
-                <div className="px-3 py-1.5 text-[11px] font-semibold text-[#3A322C]/60 uppercase tracking-wider border-b border-[#EFE7DA]">
-                  Demo Switcher
-                </div>
-                <button
-                  onClick={() => onSwitchAccount('9999999999', 'admin123')}
-                  className="w-full text-left px-3 py-1.5 text-xs text-[#8B3A3A] hover:bg-[#FDFBF7] font-medium flex items-center justify-between"
-                >
-                  Admin Swami <span>(Admin)</span>
-                </button>
-                <button
-                  onClick={() => onSwitchAccount('8888888888', 'karyakar123')}
-                  className="w-full text-left px-3 py-1.5 text-xs text-[#E8A33D] hover:bg-[#FDFBF7] font-medium flex items-center justify-between"
-                >
-                  Priya Shah <span>(Karyakar)</span>
-                </button>
-                <button
-                  onClick={() => onSwitchAccount('7777777777', 'user123')}
-                  className="w-full text-left px-3 py-1.5 text-xs text-[#5B8C5B] hover:bg-[#FDFBF7] font-medium flex items-center justify-between"
-                >
-                  Aarav Patel <span>(User)</span>
-                </button>
-              </div>
-            </div>
-
             {/* PWA Prompt button if available */}
             {deferredPrompt && (
               <button
