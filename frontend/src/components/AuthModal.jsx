@@ -6,10 +6,10 @@ export default function AuthModal({ onLoginSuccess }) {
   const [mode, setMode] = useState('login'); // 'login' | 'signup' | 'forgot' | 'reset'
 
   // Form states
-  const [identifier, setIdentifier] = useState('9999999999'); // Phone or Email for Login / Forgot
+  const [identifier, setIdentifier] = useState(''); // Phone or Email for Login / Forgot
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('admin123');
+  const [password, setPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -128,13 +128,6 @@ export default function AuthModal({ onLoginSuccess }) {
     }
   };
 
-  const handleQuickFill = (demoId, demoPass) => {
-    setIdentifier(demoId);
-    setPassword(demoPass);
-    setError('');
-    setInfo('');
-  };
-
   return (
     <div className="fixed inset-0 z-50 bg-[#3A322C]/40 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl max-w-md w-full p-6 warm-shadow border border-[#EFE7DA] animate-in fade-in zoom-in-95 duration-200">
@@ -156,38 +149,6 @@ export default function AuthModal({ onLoginSuccess }) {
              'Sign in with your Phone Number or Email Address & Password'}
           </p>
         </div>
-
-        {/* Quick Demo Fill Buttons */}
-        {mode === 'login' && (
-          <div className="mb-5 bg-[#FDFBF7] p-3 rounded-xl border border-[#EFE7DA]">
-            <div className="text-[11px] font-semibold text-[#8B3A3A] uppercase tracking-wider mb-2">
-              QUICK DEMO ACCOUNTS:
-            </div>
-            <div className="grid grid-cols-3 gap-1.5">
-              <button
-                type="button"
-                onClick={() => handleQuickFill('admin@sabha.org', 'admin123')}
-                className="text-xs bg-white hover:bg-[#8B3A3A] hover:text-white text-[#8B3A3A] font-semibold py-1.5 px-2 rounded-lg border border-[#8B3A3A]/20 transition-all cursor-pointer text-center"
-              >
-                Admin
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickFill('karyakar@sabha.org', 'karyakar123')}
-                className="text-xs bg-white hover:bg-[#E8A33D] hover:text-white text-[#E8A33D] font-semibold py-1.5 px-2 rounded-lg border border-[#E8A33D]/30 transition-all cursor-pointer text-center"
-              >
-                Karyakar
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickFill('user1@sabha.org', 'user123')}
-                className="text-xs bg-white hover:bg-[#5B8C5B] hover:text-white text-[#5B8C5B] font-semibold py-1.5 px-2 rounded-lg border border-[#5B8C5B]/30 transition-all cursor-pointer text-center"
-              >
-                User
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Error / Info Banners */}
         {error && (

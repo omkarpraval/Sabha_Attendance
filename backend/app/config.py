@@ -22,7 +22,17 @@ class Settings(BaseSettings):
     EMAIL_FROM: str = "omkarpraval@zohomail.in"
     SMTP_USE_TLS: bool = True
 
+    # Initial Admin Accounts for Automatic Production Bootstrapping
+    INITIAL_ADMIN_PHONE_1: str = ""
+    INITIAL_ADMIN_EMAIL_1: str = ""
+    INITIAL_ADMIN_PASSWORD_1: str = ""
+
+    INITIAL_ADMIN_PHONE_2: str = ""
+    INITIAL_ADMIN_EMAIL_2: str = ""
+    INITIAL_ADMIN_PASSWORD_2: str = ""
+
     class Config:
         env_file = ".env"
+        extra = "ignore"
 
 settings = Settings()

@@ -21,5 +21,5 @@ class SimpleRateLimiter:
             )
         self.requests[client_ip].append(now)
 
-login_limiter = SimpleRateLimiter(max_requests=10, window_seconds=60)
-scan_limiter = SimpleRateLimiter(max_requests=25, window_seconds=60)
+login_limiter = SimpleRateLimiter(max_requests=30, window_seconds=60)
+scan_limiter = SimpleRateLimiter(max_requests=50, window_seconds=60)

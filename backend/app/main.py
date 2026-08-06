@@ -20,6 +20,69 @@ if "postgresql" in settings.DATABASE_URL.lower():
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
+def ensure_initial_admins():
+    from app.database import SessionLocal
+    from app.models import User, UserRole, UserStatus
+    from app.auth import hash_password
+    
+    db = SessionLocal()
+    try:
+        admins_to_check = [
+            (
+                settings.INITIAL_ADMIN_PHONE_1,
+                settings.INITIAL_ADMIN_EMAIL_1,
+                settings.INITIAL_ADMIN_PASSWORD_1,
+                "Initial Admin 1"
+            ),
+            (
+                settings.INITIAL_ADMIN_PHONE_2,
+                settings.INITIAL_ADMIN_EMAIL_2,
+                settings.INITIAL_ADMIN_PASSWORD_2,
+                "Initial Admin 2"
+            )
+        ]
+
+        for phone, email, password, default_name in admins_to_check:
+            phone_str = str(phone).strip() if phone else ""
+            email_str = str(email).strip() if email else ""
+            pwd_str = str(password).strip() if password else ""
+
+            if not (phone_str or email_str) or not pwd_str:
+                continue
+
+            existing = None
+            if phone_str:
+                existing = db.query(User).filter(User.phone == phone_str).first()
+            if not existing and email_str:
+                existing = db.query(User).filter(User.email == email_str).first()
+
+            if not existing:
+                new_admin = User(
+                    phone=phone_str or "0000000000",
+                    email=email_str or None,
+                    name=default_name,
+                    hashed_password=hash_password(pwd_str),
+                    role=UserRole.ADMIN,
+                    status=UserStatus.APPROVED,
+                    member_category="satsangi"
+                )
+                db.add(new_admin)
+                db.commit()
+                print(f"[BOOTSTRAP] Initial Admin account created: {phone_str or email_str}")
+            else:
+                if existing.role != UserRole.ADMIN or existing.status != UserStatus.APPROVED:
+                    existing.role = UserRole.ADMIN
+                    existing.status = UserStatus.APPROVED
+                    db.commit()
+                    print(f"[BOOTSTRAP] Existing user promoted to Admin: {existing.phone}")
+    except Exception as e:
+        print(f"[BOOTSTRAP ERROR] Error ensuring initial admins: {e}")
+    finally:
+        db.close()
+
+# Auto-bootstrap initial admin accounts on server startup
+ensure_initial_admins()
+
 app = FastAPI(
     title="Sabha Attendance Management System API",
     description="Full-stack attendance tracking API with QR + Geofencing for regular and irregular sabha events.",
