@@ -1,4 +1,7 @@
-const API_BASE = '/api';
+const API_BASE = import.meta.env.VITE_API_URL || 
+  (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? '/api'
+    : 'https://sabha-attendance-iyjr.onrender.com/api');
 
 export const getAuthToken = () => localStorage.getItem('token');
 export const setAuthToken = (token) => localStorage.setItem('token', token);
