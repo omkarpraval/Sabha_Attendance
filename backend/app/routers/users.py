@@ -82,7 +82,7 @@ def create_user_by_admin(
         hashed_password=hash_password(pwd),
         role=req.role if req.role in [UserRole.YUVAK, UserRole.KARYAKAR, UserRole.ADMIN, "user", "yuvak"] else UserRole.YUVAK,
         status=UserStatus.APPROVED,
-        member_category="gunbhavi" if req.member_category in [MemberCategory.GUNBHAVI, "goon_bhavi", "gunbhavi"] else MemberCategory.SATSANGI,
+        member_category="b2y" if req.member_category and req.member_category.strip().lower() in ["b2y", "bty"] else ("gunbhavi" if req.member_category and req.member_category.strip().lower() in ["gunbhavi", "goon_bhavi", "bhavi"] else "satsangi"),
         area=req.area,
         is_working=req.is_working,
         is_studying=req.is_studying,
@@ -124,7 +124,7 @@ def bulk_import_users(
 
         raw_pwd = u_item.password.strip() if (u_item.password and u_item.password.strip()) else clean_phone
         raw_cat = (u_item.member_category or "").strip().lower()
-        category = "gunbhavi" if raw_cat in ["gunbhavi", "goon_bhavi", "bhavi"] else MemberCategory.SATSANGI
+        category = "b2y" if raw_cat in ["b2y", "bty"] else ("gunbhavi" if raw_cat in ["gunbhavi", "goon_bhavi", "bhavi"] else "satsangi")
         raw_role = (u_item.role or "").strip().lower()
         role = "yuvak" if raw_role in ["yuvak", "user"] else (raw_role if raw_role in ["karyakar", "admin"] else UserRole.YUVAK)
 
@@ -190,7 +190,7 @@ def update_user_by_admin(
         target.hashed_password = hash_password(req.password)
     if req.member_category:
         m_cat = req.member_category.strip().lower()
-        target.member_category = "gunbhavi" if m_cat in ["gunbhavi", "goon_bhavi", "bhavi"] else MemberCategory.SATSANGI
+        target.member_category = "b2y" if m_cat in ["b2y", "bty"] else ("gunbhavi" if m_cat in ["gunbhavi", "goon_bhavi", "bhavi"] else "satsangi")
     if req.role:
         r_role = req.role.strip().lower()
         target.role = "yuvak" if r_role in ["yuvak", "user"] else r_role
