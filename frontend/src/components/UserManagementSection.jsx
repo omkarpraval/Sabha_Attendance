@@ -891,7 +891,7 @@ export default function UserManagementSection({ currentUser }) {
             <div className="p-3 bg-[#FDFBF7] rounded-xl border border-[#EFE7DA] flex items-center justify-between">
               <div>
                 <div className="font-semibold text-xs text-[#3A322C]">Step 1: Download Sample CSV Template</div>
-                <div className="text-[11px] text-[#3A322C]/60">Pre-formatted columns: Name, Phone, Email, DOB, Category, Role</div>
+                <div className="text-[11px] text-[#3A322C]/60">Pre-formatted: Full Name, Mobile Number, Birthdate, Area, Working?, Studying?, Occupation, Company, Stream, Details</div>
               </div>
               <button
                 type="button"
@@ -930,12 +930,14 @@ export default function UserManagementSection({ currentUser }) {
                   <span>File Preview ({bulkPreviewData.length} records detected)</span>
                   <span className="text-[11px] text-[#5B8C5B] font-bold">First 5 rows shown</span>
                 </div>
-                <div className="max-h-40 overflow-y-auto border border-[#EFE7DA] rounded-xl text-[11px]">
+                <div className="max-h-48 overflow-y-auto border border-[#EFE7DA] rounded-xl text-[11px]">
                   <table className="w-full text-left">
                     <thead className="bg-[#FDFBF7] text-[#8B3A3A] font-semibold sticky top-0">
                       <tr>
                         <th className="p-2">Name</th>
                         <th className="p-2">Phone</th>
+                        <th className="p-2">Area</th>
+                        <th className="p-2">Work / Study Details</th>
                         <th className="p-2">Category</th>
                         <th className="p-2">Role</th>
                       </tr>
@@ -945,6 +947,10 @@ export default function UserManagementSection({ currentUser }) {
                         <tr key={idx} className="hover:bg-[#FDFBF7]">
                           <td className="p-2 font-medium">{row.name}</td>
                           <td className="p-2 font-mono">{row.phone}</td>
+                          <td className="p-2 text-[#8B3A3A] font-medium">{row.area || '-'}</td>
+                          <td className="p-2 text-[#3A322C]/80">
+                            {row.is_working === 'Yes' ? (row.occupation || 'Working') : (row.education_stream || row.study_details || '-')}
+                          </td>
                           <td className="p-2 capitalize">{row.member_category}</td>
                           <td className="p-2 uppercase font-semibold text-[10px]">{row.role}</td>
                         </tr>
