@@ -4,6 +4,7 @@ import Header from './components/Header';
 import { apiFetch, getAuthToken, setAuthToken, removeAuthToken } from './api';
 import { syncOfflineScans } from './utils/offlineQueue';
 
+const HomePage = lazy(() => import('./components/HomePage'));
 const AuthModal = lazy(() => import('./components/AuthModal'));
 const UserPortal = lazy(() => import('./components/UserPortal'));
 const KaryakarPortal = lazy(() => import('./components/KaryakarPortal'));
@@ -12,6 +13,7 @@ const AdminPortal = lazy(() => import('./components/AdminPortal'));
 export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [autoScanNotice, setAutoScanNotice] = useState(null);
 
@@ -198,14 +200,16 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-[#3A322C]">
-      {/* Navigation Header */}
-      <Header
-        user={user}
-        onLogout={handleLogout}
-        onSwitchAccount={handleSwitchAccount}
-        onInstallPWA={handleInstallPWA}
-        deferredPrompt={deferredPrompt}
-      />
+      {/* Navigation Header for Logged-In Users */}
+      {user && (
+        <Header
+          user={user}
+          onLogout={handleLogout}
+          onSwitchAccount={handleSwitchAccount}
+          onInstallPWA={handleInstallPWA}
+          deferredPrompt={deferredPrompt}
+        />
+      )}
 
       {/* Auto Camera Scan Notification Modal */}
       {autoScanNotice && (
@@ -273,7 +277,7 @@ export default function App() {
       )}
 
       {/* Main Content Body */}
-      <main className="pb-12">
+      <main>
         <Suspense fallback={
           <div className="py-20 flex flex-col items-center justify-center space-y-3">
             <Loader2 className="w-8 h-8 text-[#8B3A3A] animate-spin" />
@@ -281,9 +285,20 @@ export default function App() {
           </div>
         }>
           {!user ? (
-            <AuthModal onLoginSuccess={handleLoginSuccess} />
-          ) : (
             <>
+              <HomePage onOpenLogin={() => setShowLoginModal(true)} />
+              {(showLoginModal || sessionStorage.getItem('pending_qr_ref')) && (
+                <AuthModal 
+                  onLoginSuccess={(token, uData) => {
+                    setShowLoginModal(false);
+                    handleLoginSuccess(token, uData);
+                  }}
+                  onClose={() => setShowLoginModal(false)}
+                />
+              )}
+            </>
+          ) : (
+            <div className="pb-12">
               {user.role === 'admin' && (
                 <AdminPortal user={user} onUserUpdated={checkAuth} />
               )}
@@ -293,7 +308,7 @@ export default function App() {
               {user.role === 'user' && (
                 <UserPortal user={user} onUserUpdated={checkAuth} />
               )}
-            </>
+            </div>
           )}
         </Suspense>
       </main>

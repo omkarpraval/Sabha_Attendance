@@ -26,7 +26,7 @@ def seed_database():
 
     print("Seeding database...")
 
-    # 1. Create Admin User
+    # 1. Create Admin Users
     admin = User(
         phone="9999999999",
         email="admin@sabha.org",
@@ -38,7 +38,29 @@ def seed_database():
         current_streak=5,
         lifetime_count=24
     )
-    db.add(admin)
+    admin1 = User(
+        phone="8369302198",
+        email="omkarpraval958@gmail.com",
+        name="Omkar Praval (Admin)",
+        dob="1995-01-01",
+        hashed_password=hash_password("8369302198"),
+        role=UserRole.ADMIN,
+        status=UserStatus.APPROVED,
+        current_streak=8,
+        lifetime_count=32
+    )
+    admin2 = User(
+        phone="8779690801",
+        email="2662.shishir@gmail.com",
+        name="Shishir (Admin)",
+        dob="1995-08-08",
+        hashed_password=hash_password("8779690801"),
+        role=UserRole.ADMIN,
+        status=UserStatus.APPROVED,
+        current_streak=6,
+        lifetime_count=28
+    )
+    db.add_all([admin, admin1, admin2])
 
     # 2. Create Karyakar User
     karyakar = User(

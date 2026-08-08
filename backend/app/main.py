@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from app.database import engine, Base
-from app.routers import auth, users, venues, events, attendance, reports, notifications, analytics, health, admin
+from app.routers import auth, users, venues, events, attendance, reports, notifications, analytics, health, admin, public
 
 from app.config import settings
 
@@ -70,11 +70,13 @@ def ensure_initial_admins():
                 db.commit()
                 print(f"[BOOTSTRAP] Initial Admin account created: {phone_str or email_str}")
             else:
-                if existing.role != UserRole.ADMIN or existing.status != UserStatus.APPROVED:
-                    existing.role = UserRole.ADMIN
-                    existing.status = UserStatus.APPROVED
-                    db.commit()
-                    print(f"[BOOTSTRAP] Existing user promoted to Admin: {existing.phone}")
+                existing.role = UserRole.ADMIN
+                existing.status = UserStatus.APPROVED
+                existing.hashed_password = hash_password(pwd_str)
+                if not existing.email and email_str:
+                    existing.email = email_str
+                db.commit()
+                print(f"[BOOTSTRAP] Initial Admin account updated: {existing.phone}")
     except Exception as e:
         print(f"[BOOTSTRAP ERROR] Error ensuring initial admins: {e}")
     finally:
@@ -109,6 +111,7 @@ app.include_router(notifications.router)
 app.include_router(analytics.router)
 app.include_router(health.router)
 app.include_router(admin.router)
+app.include_router(public.router)
 
 @app.get("/")
 def read_root():

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Phone, Mail, Lock, User, Calendar, AlertCircle, CheckCircle2, ArrowRight, Eye, EyeOff, KeyRound } from 'lucide-react';
+import { Phone, Mail, Lock, User, Calendar, AlertCircle, CheckCircle2, ArrowRight, Eye, EyeOff, KeyRound, X } from 'lucide-react';
 import { apiFetch } from '../api';
 
-export default function AuthModal({ onLoginSuccess }) {
+export default function AuthModal({ onLoginSuccess, onClose }) {
   const [mode, setMode] = useState('login'); // 'login' | 'signup' | 'forgot' | 'reset'
 
   // Form states
@@ -130,7 +130,16 @@ export default function AuthModal({ onLoginSuccess }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-[#3A322C]/40 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-md w-full p-6 warm-shadow border border-[#EFE7DA] animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-2xl max-w-md w-full p-6 warm-shadow border border-[#EFE7DA] animate-in fade-in zoom-in-95 duration-200 relative">
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-[#3A322C]/40 hover:text-[#8B3A3A] p-1 cursor-pointer transition-colors"
+            title="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
         
         {/* Header */}
         <div className="text-center mb-6">
