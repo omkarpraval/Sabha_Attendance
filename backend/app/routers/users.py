@@ -73,15 +73,23 @@ def create_user_by_admin(
                 detail="An account with this email address already exists."
             )
 
+    pwd = req.password.strip() if (req.password and req.password.strip()) else req.phone
     new_user = User(
         phone=req.phone,
         email=req.email,
         name=req.name,
         dob=req.dob,
-        hashed_password=hash_password(req.password),
+        hashed_password=hash_password(pwd),
         role=req.role if req.role in [UserRole.YUVAK, UserRole.KARYAKAR, UserRole.ADMIN, "user", "yuvak"] else UserRole.YUVAK,
         status=UserStatus.APPROVED,
         member_category="gunbhavi" if req.member_category in [MemberCategory.GUNBHAVI, "goon_bhavi", "gunbhavi"] else MemberCategory.SATSANGI,
+        area=req.area,
+        is_working=req.is_working,
+        is_studying=req.is_studying,
+        occupation=req.occupation,
+        company_name=req.company_name,
+        education_stream=req.education_stream,
+        study_details=req.study_details,
         current_streak=0,
         lifetime_count=0
     )
@@ -129,6 +137,13 @@ def bulk_import_users(
             role=role,
             status=UserStatus.APPROVED,
             member_category=category,
+            area=u_item.area.strip() if u_item.area else None,
+            is_working=u_item.is_working.strip() if u_item.is_working else None,
+            is_studying=u_item.is_studying.strip() if u_item.is_studying else None,
+            occupation=u_item.occupation.strip() if u_item.occupation else None,
+            company_name=u_item.company_name.strip() if u_item.company_name else None,
+            education_stream=u_item.education_stream.strip() if u_item.education_stream else None,
+            study_details=u_item.study_details.strip() if u_item.study_details else None,
             current_streak=0,
             lifetime_count=0
         )
@@ -181,6 +196,21 @@ def update_user_by_admin(
         target.role = "yuvak" if r_role in ["yuvak", "user"] else r_role
     if req.status and req.status in [UserStatus.APPROVED, UserStatus.PENDING, UserStatus.REJECTED]:
         target.status = req.status
+
+    if req.area is not None:
+        target.area = req.area
+    if req.is_working is not None:
+        target.is_working = req.is_working
+    if req.is_studying is not None:
+        target.is_studying = req.is_studying
+    if req.occupation is not None:
+        target.occupation = req.occupation
+    if req.company_name is not None:
+        target.company_name = req.company_name
+    if req.education_stream is not None:
+        target.education_stream = req.education_stream
+    if req.study_details is not None:
+        target.study_details = req.study_details
 
     db.commit()
     db.refresh(target)

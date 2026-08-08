@@ -50,6 +50,16 @@ class User(Base):
     role = Column(String, default=UserRole.YUVAK, index=True, nullable=False)
     status = Column(String, default=UserStatus.APPROVED, index=True, nullable=False)
     member_category = Column(String, default=MemberCategory.SATSANGI, index=True, nullable=False)
+
+    # Extended Yuvak Profile Information
+    area = Column(String, nullable=True)
+    is_working = Column(String, nullable=True)
+    is_studying = Column(String, nullable=True)
+    occupation = Column(String, nullable=True)
+    company_name = Column(String, nullable=True)
+    education_stream = Column(String, nullable=True)
+    study_details = Column(String, nullable=True)
+
     current_streak = Column(Integer, default=0)
     lifetime_count = Column(Integer, default=0)
     reset_token_hash = Column(String, nullable=True)

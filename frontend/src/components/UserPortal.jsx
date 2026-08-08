@@ -237,6 +237,34 @@ export default function UserPortal({ user, onUserUpdated }) {
         </div>
       </div>
 
+      {/* Yuvak Profile & Personal Details Card */}
+      <div className="bg-white rounded-2xl p-5 warm-shadow border border-[#EFE7DA] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="text-xs font-semibold text-[#8B3A3A] uppercase tracking-wider">Member Profile</div>
+          <div className="flex flex-wrap items-center gap-3 text-xs text-[#3A322C]">
+            <span className="font-semibold">{user.name}</span>
+            {user.phone && <span className="font-mono text-[#3A322C]/70">📱 {user.phone}</span>}
+            {user.area && <span className="bg-[#FDFBF7] px-2.5 py-0.5 rounded-full border border-[#EFE7DA] text-[#8B3A3A] font-medium">📍 {user.area}</span>}
+            {user.dob && <span className="text-[#3A322C]/70">🎂 {user.dob}</span>}
+          </div>
+        </div>
+
+        {(user.is_working === 'Yes' || user.is_studying === 'Yes' || user.occupation || user.study_details) && (
+          <div className="flex flex-wrap items-center gap-2 text-xs bg-[#FDFBF7] p-2.5 rounded-xl border border-[#EFE7DA]">
+            {user.is_working === 'Yes' && (
+              <span className="bg-[#5B8C5B]/10 text-[#5B8C5B] px-2 py-0.5 rounded-md font-semibold">
+                💼 {user.occupation || 'Working'} {user.company_name ? `@ ${user.company_name}` : ''}
+              </span>
+            )}
+            {user.is_studying === 'Yes' && (
+              <span className="bg-[#E8A33D]/10 text-[#D98A2B] px-2 py-0.5 rounded-md font-semibold">
+                🎓 {user.education_stream || 'Studying'} {user.study_details ? `(${user.study_details})` : ''}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Main Action Section: Scan to Mark Attendance */}
       <div className="bg-white rounded-2xl p-6 warm-shadow border border-[#EFE7DA] text-center space-y-4">
         <div>

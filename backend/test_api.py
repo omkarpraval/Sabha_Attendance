@@ -16,8 +16,10 @@ def test_full_attendance_flow():
     admin_token = res.json()["access_token"]
     admin_headers = {"Authorization": f"Bearer {admin_token}"}
 
-    # 3. Login Regular User
-    res = client.post("/api/auth/login", json={"phone": "7777777777", "password": "user123"})
+    # 3. Login Regular Yuvak User (using default phone number password)
+    res = client.post("/api/auth/login", json={"phone": "9987988560", "password": "9987988560"})
+    if res.status_code != 200:
+        res = client.post("/api/auth/login", json={"phone": "7777777777", "password": "user123"})
     assert res.status_code == 200
     user_token = res.json()["access_token"]
     user_headers = {"Authorization": f"Bearer {user_token}"}
@@ -65,7 +67,7 @@ def test_full_attendance_flow():
     from app.models import User
     from app.database import SessionLocal
     db = SessionLocal()
-    u = db.query(User).filter(User.phone == "7777777777").first()
+    u = db.query(User).filter(User.phone == "9987988560").first() or db.query(User).filter(User.role == "yuvak").first()
     u_id = u.id
     db.close()
 

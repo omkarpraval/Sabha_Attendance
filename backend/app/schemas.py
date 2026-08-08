@@ -80,6 +80,16 @@ class UserResponse(BaseModel):
     role: str
     status: str
     member_category: str = "satsangi"
+
+    # Extended Yuvak Profile Fields
+    area: Optional[str] = None
+    is_working: Optional[str] = None
+    is_studying: Optional[str] = None
+    occupation: Optional[str] = None
+    company_name: Optional[str] = None
+    education_stream: Optional[str] = None
+    study_details: Optional[str] = None
+
     current_streak: int
     lifetime_count: int
     created_at: datetime.datetime
@@ -92,9 +102,17 @@ class UserCreateByAdmin(BaseModel):
     email: Optional[str] = None
     name: str
     dob: Optional[str] = None
-    password: str
+    password: Optional[str] = None
     member_category: str = "satsangi"
     role: str = "yuvak"
+
+    area: Optional[str] = None
+    is_working: Optional[str] = None
+    is_studying: Optional[str] = None
+    occupation: Optional[str] = None
+    company_name: Optional[str] = None
+    education_stream: Optional[str] = None
+    study_details: Optional[str] = None
 
     @field_validator('phone')
     @classmethod
@@ -117,6 +135,14 @@ class BulkUserItem(BaseModel):
     role: Optional[str] = "yuvak"
     password: Optional[str] = None
 
+    area: Optional[str] = None
+    is_working: Optional[str] = None
+    is_studying: Optional[str] = None
+    occupation: Optional[str] = None
+    company_name: Optional[str] = None
+    education_stream: Optional[str] = None
+    study_details: Optional[str] = None
+
 class BulkUserImportRequest(BaseModel):
     users: List[BulkUserItem]
 
@@ -134,6 +160,14 @@ class UserUpdateByAdmin(BaseModel):
     member_category: Optional[str] = None
     role: Optional[str] = None
     status: Optional[str] = None
+
+    area: Optional[str] = None
+    is_working: Optional[str] = None
+    is_studying: Optional[str] = None
+    occupation: Optional[str] = None
+    company_name: Optional[str] = None
+    education_stream: Optional[str] = None
+    study_details: Optional[str] = None
 
 # Venue Schemas
 class VenueCreate(BaseModel):

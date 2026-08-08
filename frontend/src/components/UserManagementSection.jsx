@@ -37,46 +37,25 @@ export default function UserManagementSection({ currentUser }) {
     dob: '',
     password: '',
     member_category: 'satsangi',
-    role: 'user'
+    role: 'yuvak',
+    area: '',
+    is_working: '',
+    is_studying: '',
+    occupation: '',
+    company_name: '',
+    education_stream: '',
+    study_details: ''
   });
-  const [showPassword, setShowPassword] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const data = await apiFetch('/users');
-      setUsers(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleOpenBulkModal = () => {
-    setBulkFile(null);
-    setBulkPreviewData([]);
-    setError('');
-    setSuccess('');
-    setIsBulkModalOpen(true);
-  };
 
   const handleDownloadSampleCSV = () => {
     const csvContent = "data:text/csv;charset=utf-8," + 
-      "Name,Phone,Email,Date of Birth,Category,Role\n" +
-      "Ramesh Patel,9876543210,ramesh@gmail.com,1990-05-15,satsangi,user\n" +
-      "Suresh Shah,9876543211,suresh@gmail.com,1985-08-20,goon_bhavi,user\n" +
-      "Mahesh Joshi,9876543212,mahesh@gmail.com,1992-12-10,satsangi,karyakar\n";
+      "Full Name,Mobile Number,Birthdate,Area,Working?,Studying?,Occupation(if working),Company Name,Stream of Education,Study Details\n" +
+      "Virang Chauhan,9987988560,1984-12-07,Ashok Nagar,Yes,No,Information Technology,Tata Consultancy Services,Science (Engineering),Master of Computer Application\n" +
+      "Jethva Jaimin,7045367083,1998-08-08,Hanuman Nagar,Yes,No,Cashier,Reliance,Others,12Pass\n";
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "sample_members_import_template.csv");
+    link.setAttribute("download", "sabha_members_google_form_responses.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -96,29 +75,73 @@ export default function UserManagementSection({ currentUser }) {
         return;
       }
 
+      const parseCSVLine = (line) => {
+        const result = [];
+        let cur = '';
+        let inQuotes = false;
+        for (let char of line) {
+          if (char === '"') { inQuotes = !inQuotes; }
+          else if (char === ',' && !inQuotes) { result.push(cur.trim()); cur = ''; }
+          else { cur += char; }
+        }
+        result.push(cur.trim());
+        return result;
+      };
+
+      const headerRow = parseCSVLine(lines[0]).map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ''));
+      
+      const nameIdx = headerRow.findIndex(h => h.includes('name') || h.includes('fullname'));
+      const phoneIdx = headerRow.findIndex(h => h.includes('mobile') || h.includes('phone') || h.includes('number'));
+      const dobIdx = headerRow.findIndex(h => h.includes('birth') || h.includes('dob') || h.includes('date'));
+      const areaIdx = headerRow.findIndex(h => h.includes('area'));
+      const workingIdx = headerRow.findIndex(h => h.includes('working'));
+      const studyingIdx = headerRow.findIndex(h => h.includes('studying'));
+      const occIdx = headerRow.findIndex(h => h.includes('occupation'));
+      const compIdx = headerRow.findIndex(h => h.includes('company'));
+      const streamIdx = headerRow.findIndex(h => h.includes('stream') || h.includes('education'));
+      const detailsIdx = headerRow.findIndex(h => h.includes('study') || h.includes('details') || h.includes('standard') || h.includes('degree'));
+      const emailIdx = headerRow.findIndex(h => h.includes('email'));
+      const catIdx = headerRow.findIndex(h => h.includes('category'));
+
       const parsedUsers = [];
       for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].split(',').map(c => c.trim());
+        const cols = parseCSVLine(lines[i]);
         if (cols.length < 2) continue;
 
-        const name = cols[0] || '';
-        const phone = cols[1] || '';
-        const email = cols[2] || '';
-        const dob = cols[3] || '';
-        const category = (cols[4] || 'satsangi').toLowerCase();
-        const role = (cols[5] || 'yuvak').toLowerCase();
+        const name = nameIdx !== -1 ? cols[nameIdx] : cols[0] || '';
+        let phone = phoneIdx !== -1 ? cols[phoneIdx] : cols[1] || '';
+        phone = phone.replace(/\D/g, '');
+        if (phone.length > 10) phone = phone.slice(-10);
 
-        if (name && phone) {
-          parsedUsers.push({
-            name,
-            phone,
-            email: email || null,
-            dob: dob || null,
-            member_category: (category === 'gunbhavi' || category === 'goon_bhavi' || category === 'bhavi') ? 'gunbhavi' : 'satsangi',
-            role: role === 'karyakar' ? 'karyakar' : role === 'admin' ? 'admin' : 'yuvak',
-            password: null
-          });
-        }
+        if (!name || phone.length < 10) continue;
+
+        const dob = dobIdx !== -1 ? cols[dobIdx] : '';
+        const area = areaIdx !== -1 ? cols[areaIdx] : '';
+        const is_working = workingIdx !== -1 ? cols[workingIdx] : '';
+        const is_studying = studyingIdx !== -1 ? cols[studyingIdx] : '';
+        const occupation = occIdx !== -1 ? cols[occIdx] : '';
+        const company_name = compIdx !== -1 ? cols[compIdx] : '';
+        const education_stream = streamIdx !== -1 ? cols[streamIdx] : '';
+        const study_details = detailsIdx !== -1 ? cols[detailsIdx] : '';
+        const email = emailIdx !== -1 ? cols[emailIdx] : '';
+        const cat = catIdx !== -1 ? cols[catIdx].toLowerCase() : 'satsangi';
+
+        parsedUsers.push({
+          name,
+          phone,
+          email: email || null,
+          dob: dob || null,
+          area: area || null,
+          is_working: is_working || null,
+          is_studying: is_studying || null,
+          occupation: occupation || null,
+          company_name: company_name || null,
+          education_stream: education_stream || null,
+          study_details: study_details || null,
+          member_category: (cat === 'gunbhavi' || cat === 'goon_bhavi' || cat === 'bhavi') ? 'gunbhavi' : 'satsangi',
+          role: 'yuvak',
+          password: null
+        });
       }
 
       setBulkPreviewData(parsedUsers);
@@ -158,7 +181,14 @@ export default function UserManagementSection({ currentUser }) {
       dob: '',
       password: '',
       member_category: 'satsangi',
-      role: 'user'
+      role: 'yuvak',
+      area: '',
+      is_working: '',
+      is_studying: '',
+      occupation: '',
+      company_name: '',
+      education_stream: '',
+      study_details: ''
     });
     setError('');
     setSuccess('');
@@ -174,7 +204,14 @@ export default function UserManagementSection({ currentUser }) {
       dob: user.dob || '',
       password: '',
       member_category: user.member_category || 'satsangi',
-      role: user.role || 'user'
+      role: user.role || 'yuvak',
+      area: user.area || '',
+      is_working: user.is_working || '',
+      is_studying: user.is_studying || '',
+      occupation: user.occupation || '',
+      company_name: user.company_name || '',
+      education_stream: user.education_stream || '',
+      study_details: user.study_details || ''
     });
     setError('');
     setSuccess('');
@@ -228,7 +265,14 @@ export default function UserManagementSection({ currentUser }) {
       email: formData.email,
       dob: formData.dob,
       member_category: formData.member_category,
-      role: formData.role
+      role: formData.role,
+      area: formData.area,
+      is_working: formData.is_working,
+      is_studying: formData.is_studying,
+      occupation: formData.occupation,
+      company_name: formData.company_name,
+      education_stream: formData.education_stream,
+      study_details: formData.study_details
     };
 
     if (formData.password && formData.password.trim()) {
