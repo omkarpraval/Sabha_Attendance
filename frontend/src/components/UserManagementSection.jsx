@@ -329,7 +329,11 @@ export default function UserManagementSection({ currentUser }) {
       (u.email && u.email.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const matchesRole = roleFilter === 'all' || u.role === roleFilter;
-    const matchesCategory = categoryFilter === 'all' || u.member_category === categoryFilter;
+    const userCat = (u.member_category || 'satsangi').toLowerCase();
+    const matchesCategory = categoryFilter === 'all' || 
+      (categoryFilter === 'b2y' ? ['b2y', 'bty'].includes(userCat) :
+       categoryFilter === 'gunbhavi' ? ['gunbhavi', 'goon_bhavi', 'bhavi'].includes(userCat) :
+       userCat === categoryFilter);
 
     return matchesSearch && matchesRole && matchesCategory;
   });
@@ -426,9 +430,9 @@ export default function UserManagementSection({ currentUser }) {
             className="w-full px-3 py-2 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-xs text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
           >
             <option value="all">All Categories</option>
-            <option value="satsangi">Satsangi ({users.filter(u => u.member_category === 'satsangi').length})</option>
-            <option value="gunbhavi">Gunbhavi ({users.filter(u => u.member_category === 'gunbhavi' || u.member_category === 'goon_bhavi').length})</option>
-            <option value="b2y">B2Y ({users.filter(u => u.member_category === 'b2y' || u.member_category === 'bty').length})</option>
+            <option value="satsangi">Satsangi ({users.filter(u => (u.member_category || 'satsangi').toLowerCase() === 'satsangi').length})</option>
+            <option value="gunbhavi">Gunbhavi ({users.filter(u => ['gunbhavi', 'goon_bhavi', 'bhavi'].includes((u.member_category || '').toLowerCase())).length})</option>
+            <option value="b2y">B2Y ({users.filter(u => ['b2y', 'bty'].includes((u.member_category || '').toLowerCase())).length})</option>
           </select>
         </div>
       </div>
@@ -461,38 +465,40 @@ export default function UserManagementSection({ currentUser }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#EFE7DA]">
-                  {paginatedUsers.map((u) => (
-                    <tr key={u.id} className="hover:bg-[#FDFBF7]/60 transition-colors">
-                      <td className="p-3">
-                        <div className="font-semibold text-[#3A322C]">{u.name}</div>
-                        {u.email && <div className="text-[11px] text-[#3A322C]/60 font-mono">{u.email}</div>}
-                      </td>
-                      <td className="p-3 font-mono text-[#3A322C]">{u.phone}</td>
-                      <td className="p-3 font-mono">
-                        {u.dob ? (
-                          <span className="inline-flex items-center gap-1 font-semibold text-[#8B3A3A] bg-[#8B3A3A]/10 px-2.5 py-0.5 rounded-full text-[11px]">
-                            <Cake className="w-3 h-3 text-[#8B3A3A]" />
-                            <span>{u.dob}</span>
-                          </span>
-                        ) : (
-                          <span className="text-[#3A322C]/40 italic text-[11px]">Not Set</span>
-                        )}
-                      </td>
-                      <td className="p-3">
-                        {u.member_category === 'b2y' || u.member_category === 'bty' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#8B3A3A]/10 text-[#8B3A3A] border border-[#8B3A3A]/20">
-                            <Sparkles className="w-3 h-3" /> B2Y
-                          </span>
-                        ) : u.member_category === 'gunbhavi' || u.member_category === 'goon_bhavi' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#2D8A8A]/10 text-[#2D8A8A] border border-[#2D8A8A]/20">
-                            <Sparkles className="w-3 h-3" /> Gunbhavi
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#E8A33D]/10 text-[#D98A2B] border border-[#E8A33D]/30">
-                            Satsangi
-                          </span>
-                        )}
-                      </td>
+                  {paginatedUsers.map((u) => {
+                    const catVal = (u.member_category || 'satsangi').toLowerCase();
+                    return (
+                      <tr key={u.id} className="hover:bg-[#FDFBF7]/60 transition-colors">
+                        <td className="p-3">
+                          <div className="font-semibold text-[#3A322C]">{u.name}</div>
+                          {u.email && <div className="text-[11px] text-[#3A322C]/60 font-mono">{u.email}</div>}
+                        </td>
+                        <td className="p-3 font-mono text-[#3A322C]">{u.phone}</td>
+                        <td className="p-3 font-mono">
+                          {u.dob ? (
+                            <span className="inline-flex items-center gap-1 font-semibold text-[#8B3A3A] bg-[#8B3A3A]/10 px-2.5 py-0.5 rounded-full text-[11px]">
+                              <Cake className="w-3 h-3 text-[#8B3A3A]" />
+                              <span>{u.dob}</span>
+                            </span>
+                          ) : (
+                            <span className="text-[#3A322C]/40 italic text-[11px]">Not Set</span>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          {['b2y', 'bty'].includes(catVal) ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#8B3A3A]/10 text-[#8B3A3A] border border-[#8B3A3A]/20">
+                              <Sparkles className="w-3 h-3" /> B2Y
+                            </span>
+                          ) : ['gunbhavi', 'goon_bhavi', 'bhavi'].includes(catVal) ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#2D8A8A]/10 text-[#2D8A8A] border border-[#2D8A8A]/20">
+                              <Sparkles className="w-3 h-3" /> Gunbhavi
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#E8A33D]/10 text-[#D98A2B] border border-[#E8A33D]/30">
+                              Satsangi
+                            </span>
+                          )}
+                        </td>
                       <td className="p-3">
                         <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase ${
                           u.role === 'admin' ? 'bg-[#8B3A3A]/10 text-[#8B3A3A]' :
@@ -529,7 +535,8 @@ export default function UserManagementSection({ currentUser }) {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  );
+                })}
                 </tbody>
               </table>
             </div>

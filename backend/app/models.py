@@ -7,6 +7,8 @@ class MemberCategory:
     SATSANGI = "satsangi"
     GUNBHAVI = "gunbhavi"
     GOON_BHAVI = "gunbhavi"  # Backward-compatible alias
+    B2Y = "b2y"
+    BTY = "b2y"  # Backward-compatible alias
 
 class UserRole:
     ADMIN = "admin"
