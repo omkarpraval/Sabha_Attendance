@@ -169,17 +169,39 @@ def send_password_reset_email(user_email: str, user_name: str, reset_token: str,
       part = MIMEText(html_content, "html")
       message.attach(part)
 
-      if settings.SMTP_USE_TLS:
-          server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15)
-          server.starttls()
-      else:
-          server = smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15)
+      # Try SSL on Port 465 first (works reliably on Render cloud hosts), fallback to Port 587 (STARTTLS)
+      sent = False
+      last_err = None
 
-      server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
-      server.sendmail(sender_email, [user_email], message.as_string())
-      server.quit()
-      logger.info(f"Successfully sent password reset email to {user_email}")
-      return True
+      # Attempt 1: Port 465 (SSL Direct)
+      try:
+          server = smtplib.SMTP_SSL(settings.SMTP_HOST, 465, timeout=10)
+          server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
+          server.sendmail(sender_email, [user_email], message.as_string())
+          server.quit()
+          sent = True
+          logger.info(f"Successfully sent password reset email to {user_email} via SSL (Port 465)")
+      except Exception as e_ssl:
+          last_err = e_ssl
+          logger.warning(f"SMTP SSL Port 465 attempt failed: {e_ssl}. Retrying via Port 587 (STARTTLS)...")
+
+      # Attempt 2: Port 587 (STARTTLS) if Attempt 1 failed
+      if not sent:
+          try:
+              server = smtplib.SMTP(settings.SMTP_HOST, 587, timeout=10)
+              server.starttls()
+              server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
+              server.sendmail(sender_email, [user_email], message.as_string())
+              server.quit()
+              sent = True
+              logger.info(f"Successfully sent password reset email to {user_email} via STARTTLS (Port 587)")
+          except Exception as e_tls:
+              last_err = e_tls
+
+      if sent:
+          return True
+
+      raise last_err or Exception("All SMTP ports (465, 587) failed or timed out.")
 
     except Exception as e:
       logger.error(f"Failed to send password reset email to {user_email}: {e}")

@@ -17,11 +17,11 @@ class Settings(BaseSettings):
 
     # SMTP Email configuration (Zoho SMTP)
     SMTP_HOST: str = "smtp.zoho.in"
-    SMTP_PORT: int = 587
+    SMTP_PORT: int = 465
     SMTP_USERNAME: str = "omkarpraval@zohomail.in"
     SMTP_PASSWORD: str = "vmWcGaLrCySv"
     EMAIL_FROM: str = "omkarpraval@zohomail.in"
-    SMTP_USE_TLS: bool = True
+    SMTP_USE_TLS: bool = False
 
     # Initial Admin Accounts for Automatic Production Bootstrapping
     INITIAL_ADMIN_PHONE_1: str = ""
