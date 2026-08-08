@@ -165,7 +165,7 @@ export default function UserManagementSection({ currentUser }) {
           company_name: company_name || null,
           education_stream: education_stream || null,
           study_details: study_details || null,
-          member_category: cat === 'bty' ? 'bty' : (cat === 'gunbhavi' || cat === 'goon_bhavi' || cat === 'bhavi') ? 'gunbhavi' : 'satsangi',
+          member_category: (cat === 'b2y' || cat === 'bty') ? 'b2y' : (cat === 'gunbhavi' || cat === 'goon_bhavi' || cat === 'bhavi') ? 'gunbhavi' : 'satsangi',
           role: 'yuvak',
           password: null
         });
@@ -428,7 +428,7 @@ export default function UserManagementSection({ currentUser }) {
             <option value="all">All Categories</option>
             <option value="satsangi">Satsangi ({users.filter(u => u.member_category === 'satsangi').length})</option>
             <option value="gunbhavi">Gunbhavi ({users.filter(u => u.member_category === 'gunbhavi' || u.member_category === 'goon_bhavi').length})</option>
-            <option value="bty">BTY ({users.filter(u => u.member_category === 'bty').length})</option>
+            <option value="b2y">B2Y ({users.filter(u => u.member_category === 'b2y' || u.member_category === 'bty').length})</option>
           </select>
         </div>
       </div>
@@ -479,9 +479,9 @@ export default function UserManagementSection({ currentUser }) {
                         )}
                       </td>
                       <td className="p-3">
-                        {u.member_category === 'bty' ? (
+                        {u.member_category === 'b2y' || u.member_category === 'bty' ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#8B3A3A]/10 text-[#8B3A3A] border border-[#8B3A3A]/20">
-                            <Sparkles className="w-3 h-3" /> BTY
+                            <Sparkles className="w-3 h-3" /> B2Y
                           </span>
                         ) : u.member_category === 'gunbhavi' || u.member_category === 'goon_bhavi' ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#2D8A8A]/10 text-[#2D8A8A] border border-[#2D8A8A]/20">
@@ -790,7 +790,7 @@ export default function UserManagementSection({ currentUser }) {
                   >
                     <option value="satsangi">Satsangi</option>
                     <option value="gunbhavi">Gunbhavi</option>
-                    <option value="bty">BTY</option>
+                    <option value="b2y">B2Y</option>
                   </select>
                 </div>
 
@@ -1017,7 +1017,7 @@ export default function UserManagementSection({ currentUser }) {
                   >
                     <option value="satsangi">Satsangi</option>
                     <option value="gunbhavi">Gunbhavi</option>
-                    <option value="bty">BTY</option>
+                    <option value="b2y">B2Y</option>
                   </select>
                 </div>
 

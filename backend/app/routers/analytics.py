@@ -30,7 +30,7 @@ def get_dashboard_analytics(
     total_members = len(users)
     satsangi_count = len([u for u in users if (u.member_category or 'satsangi').lower() == 'satsangi'])
     gunbhavi_count = len([u for u in users if (u.member_category or '').lower() in ['gunbhavi', 'goon_bhavi', 'bhavi']])
-    bty_count = len([u for u in users if (u.member_category or '').lower() == 'bty'])
+    b2y_count = len([u for u in users if (u.member_category or '').lower() in ['b2y', 'bty']])
     streak_holders_count = len([u for u in users if (u.current_streak or 0) >= 3])
     streak_retention_pct = round((streak_holders_count / total_members * 100)) if total_members > 0 else 0
 
@@ -208,7 +208,8 @@ def get_dashboard_analytics(
             "satsangi_count": satsangi_count,
             "gunbhavi_count": gunbhavi_count,
             "bhavi_count": gunbhavi_count,
-            "bty_count": bty_count,
+            "b2y_count": b2y_count,
+            "bty_count": b2y_count,
             "peak_sabha_day": peak_sabha_day
         },
         "weekly_trends": weekly_trends[-10:],

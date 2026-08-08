@@ -1045,7 +1045,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
                 </div>
               </div>
               <div className="font-serif-accent text-xl font-bold text-[#3A322C]">
-                {analyticsData?.kpis?.satsangi_count ?? (allUsers?.filter(u => (u.member_category || 'satsangi').toLowerCase() === 'satsangi').length || 0)} <span className="text-xs text-[#5B8C5B] font-sans font-medium">Satsangi</span> / {(analyticsData?.kpis?.gunbhavi_count ?? (allUsers?.filter(u => ['gunbhavi', 'goon_bhavi', 'bhavi'].includes((u.member_category || '').toLowerCase())).length || 0))} <span className="text-xs text-[#E8A33D] font-sans font-medium">Gunbhavi</span> / {(analyticsData?.kpis?.bty_count ?? (allUsers?.filter(u => (u.member_category || '').toLowerCase() === 'bty').length || 0))} <span className="text-xs text-[#8B3A3A] font-sans font-medium">BTY</span>
+                {analyticsData?.kpis?.satsangi_count ?? (allUsers?.filter(u => (u.member_category || 'satsangi').toLowerCase() === 'satsangi').length || 0)} <span className="text-xs text-[#5B8C5B] font-sans font-medium">Satsangi</span> / {(analyticsData?.kpis?.gunbhavi_count ?? (allUsers?.filter(u => ['gunbhavi', 'goon_bhavi', 'bhavi'].includes((u.member_category || '').toLowerCase())).length || 0))} <span className="text-xs text-[#E8A33D] font-sans font-medium">Gunbhavi</span> / {(analyticsData?.kpis?.b2y_count ?? analyticsData?.kpis?.bty_count ?? (allUsers?.filter(u => ['b2y', 'bty'].includes((u.member_category || '').toLowerCase())).length || 0))} <span className="text-xs text-[#8B3A3A] font-sans font-medium">B2Y</span>
               </div>
               <p className="text-[11px] text-[#3A322C]/60 mt-1">Total active member breakdown</p>
             </div>
@@ -1123,7 +1123,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
                           </div>
                           <div className="text-[11px] text-[#3A322C]/70 mt-0.5 flex items-center gap-1">
                             <Phone className="w-3 h-3 text-[#8B3A3A]" />
-                            <span>{item.user.phone} • {item.user.member_category === 'bty' ? 'BTY' : item.user.member_category === 'gunbhavi' || item.user.member_category === 'goon_bhavi' ? 'Gunbhavi' : 'Satsangi'}</span>
+                            <span>{item.user.phone} • {item.user.member_category === 'b2y' || item.user.member_category === 'bty' ? 'B2Y' : item.user.member_category === 'gunbhavi' || item.user.member_category === 'goon_bhavi' ? 'Gunbhavi' : 'Satsangi'}</span>
                           </div>
                         </div>
                         <div className="text-right">

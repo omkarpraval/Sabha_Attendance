@@ -21,6 +21,7 @@ try:
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS education_stream VARCHAR;"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS study_details VARCHAR;"))
         conn.execute(text("UPDATE users SET member_category = 'gunbhavi' WHERE member_category IN ('goon_bhavi', 'bhavi');"))
+        conn.execute(text("UPDATE users SET member_category = 'b2y' WHERE LOWER(member_category) = 'bty';"))
         conn.execute(text("UPDATE users SET role = 'yuvak' WHERE role = 'user';"))
         conn.commit()
 except Exception:

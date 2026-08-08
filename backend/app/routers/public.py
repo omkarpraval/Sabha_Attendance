@@ -21,7 +21,12 @@ def get_public_leaderboard(db: Session = Depends(get_db)):
         User.status == UserStatus.APPROVED
     ).all()
 
-    total_events = db.query(Event).count()
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    total_events = db.query(Event).filter(
+        (Event.status.in_([EventStatus.CLOSED, EventStatus.OPEN])) | (Event.event_date <= today_str)
+    ).count()
+    if total_events == 0:
+        total_events = 1
 
     leaderboard_data = []
 
@@ -222,7 +227,10 @@ def get_public_stats(db: Session = Depends(get_db)):
     Returns public aggregate counts for home page floating counters.
     """
     total_attendances = db.query(Attendance).count()
-    total_events = db.query(Event).count()
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    total_events = db.query(Event).filter(
+        (Event.status.in_([EventStatus.CLOSED, EventStatus.OPEN])) | (Event.event_date <= today_str)
+    ).count()
     total_members = db.query(User).filter(User.status == UserStatus.APPROVED).count()
 
     return {
