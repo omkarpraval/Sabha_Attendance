@@ -373,27 +373,31 @@ export default function UserManagementSection({ currentUser }) {
         </div>
       </div>
 
-      {/* Error / Success Notifications */}
+      {/* 🔔 FLOATING ACTION STATUS BAR BANNER */}
       {error && (
-        <div className="mb-4 p-3 rounded-xl bg-[#C1554A]/10 border border-[#C1554A]/30 text-[#C1554A] text-xs font-medium flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[99999] animate-in fade-in slide-in-from-top-4 duration-300 w-[92%] max-w-md pointer-events-auto">
+          <div className="px-5 py-3.5 rounded-2xl shadow-2xl flex items-center justify-between gap-3 border text-xs sm:text-sm font-semibold tracking-wide bg-[#C1554A] text-white border-white/20 warm-shadow">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <AlertCircle className="w-5 h-5 text-white/90 shrink-0" />
+              <span className="truncate">{error}</span>
+            </div>
+            <button onClick={() => setError('')} className="text-white/80 hover:text-white cursor-pointer p-1 rounded-full hover:bg-white/10 transition-colors shrink-0">
+              <X className="w-4 h-4" />
+            </button>
           </div>
-          <button onClick={() => setError('')} className="text-[#C1554A] hover:opacity-75 cursor-pointer">
-            <X className="w-4 h-4" />
-          </button>
         </div>
       )}
       {success && (
-        <div className="mb-4 p-3 rounded-xl bg-[#5B8C5B]/10 border border-[#5B8C5B]/30 text-[#5B8C5B] text-xs font-medium flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>{success}</span>
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[99999] animate-in fade-in slide-in-from-top-4 duration-300 w-[92%] max-w-md pointer-events-auto">
+          <div className="px-5 py-3.5 rounded-2xl shadow-2xl flex items-center justify-between gap-3 border text-xs sm:text-sm font-semibold tracking-wide bg-[#15803D] text-white border-white/20 warm-shadow">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <CheckCircle2 className="w-5 h-5 text-white/90 shrink-0" />
+              <span className="truncate">{success}</span>
+            </div>
+            <button onClick={() => setSuccess('')} className="text-white/80 hover:text-white cursor-pointer p-1 rounded-full hover:bg-white/10 transition-colors shrink-0">
+              <X className="w-4 h-4" />
+            </button>
           </div>
-          <button onClick={() => setSuccess('')} className="text-[#5B8C5B] hover:opacity-75 cursor-pointer">
-            <X className="w-4 h-4" />
-          </button>
         </div>
       )}
 

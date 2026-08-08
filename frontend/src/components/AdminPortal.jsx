@@ -3283,6 +3283,36 @@ export default function AdminPortal({ user, onUserUpdated }) {
         );
       })()}
 
+      {/* 🔔 FLOATING ACTION STATUS BAR BANNER */}
+      {toast && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[99999] animate-in fade-in slide-in-from-top-4 duration-300 w-[92%] max-w-md pointer-events-auto">
+          <div className={`px-5 py-3.5 rounded-2xl shadow-2xl flex items-center justify-between gap-3 border text-xs sm:text-sm font-semibold tracking-wide backdrop-blur-md ${
+            toast.toLowerCase().includes('delete') || toast.toLowerCase().includes('reject') || toast.toLowerCase().includes('cancel') || toast.toLowerCase().includes('remove')
+              ? 'bg-[#C1554A] text-white border-white/20 warm-shadow'
+              : toast.toLowerCase().includes('error') || toast.toLowerCase().includes('failed')
+              ? 'bg-[#8B3A3A] text-white border-white/20 warm-shadow'
+              : 'bg-[#15803D] text-white border-white/20 warm-shadow'
+          }`}>
+            <div className="flex items-center gap-2.5 min-w-0">
+              {toast.toLowerCase().includes('delete') || toast.toLowerCase().includes('reject') || toast.toLowerCase().includes('remove') ? (
+                <Trash2 className="w-5 h-5 text-white/90 shrink-0" />
+              ) : toast.toLowerCase().includes('error') || toast.toLowerCase().includes('failed') ? (
+                <AlertCircle className="w-5 h-5 text-white/90 shrink-0" />
+              ) : (
+                <CheckCircle2 className="w-5 h-5 text-white/90 shrink-0" />
+              )}
+              <span className="truncate">{toast}</span>
+            </div>
+            <button
+              onClick={() => setToast('')}
+              className="text-white/80 hover:text-white cursor-pointer p-1 rounded-full hover:bg-white/10 transition-colors shrink-0"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
