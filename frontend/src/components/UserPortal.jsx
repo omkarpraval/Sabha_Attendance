@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { QrCode, Flame, Calendar as CalendarIcon, CheckCircle2, Clock, MapPin, AlertCircle, Sparkles, Send, BarChart3, TrendingUp, Award, PieChart, Shield, Phone, PhoneCall, Mail, ChevronDown, Filter } from 'lucide-react';
+import { QrCode, Flame, Calendar as CalendarIcon, CheckCircle2, Clock, MapPin, AlertCircle, Sparkles, Send, BarChart3, TrendingUp, Award, PieChart, Shield, Phone, PhoneCall, Mail, ChevronDown, Filter, Briefcase, GraduationCap } from 'lucide-react';
 import { apiFetch } from '../api';
 import { saveOfflineScan } from '../utils/offlineQueue';
 import QRScannerModal from './QRScannerModal';
