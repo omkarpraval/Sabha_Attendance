@@ -928,14 +928,16 @@ export default function UserManagementSection({ currentUser }) {
               <div>
                 <div className="flex items-center justify-between text-xs font-semibold text-[#3A322C] mb-1.5">
                   <span>File Preview ({bulkPreviewData.length} records detected)</span>
-                  <span className="text-[11px] text-[#5B8C5B] font-bold">First 5 rows shown</span>
+                  <span className="text-[11px] text-[#5B8C5B] font-bold">Showing all {bulkPreviewData.length} records</span>
                 </div>
-                <div className="max-h-48 overflow-y-auto border border-[#EFE7DA] rounded-xl text-[11px]">
+                <div className="max-h-64 overflow-y-auto border border-[#EFE7DA] rounded-xl text-[11px]">
                   <table className="w-full text-left">
-                    <thead className="bg-[#FDFBF7] text-[#8B3A3A] font-semibold sticky top-0">
+                    <thead className="bg-[#FDFBF7] text-[#8B3A3A] font-semibold sticky top-0 border-b border-[#EFE7DA] z-10">
                       <tr>
+                        <th className="p-2">#</th>
                         <th className="p-2">Name</th>
                         <th className="p-2">Phone</th>
+                        <th className="p-2">Birthdate</th>
                         <th className="p-2">Area</th>
                         <th className="p-2">Work / Study Details</th>
                         <th className="p-2">Category</th>
@@ -943,10 +945,12 @@ export default function UserManagementSection({ currentUser }) {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#EFE7DA]">
-                      {bulkPreviewData.slice(0, 5).map((row, idx) => (
+                      {bulkPreviewData.map((row, idx) => (
                         <tr key={idx} className="hover:bg-[#FDFBF7]">
+                          <td className="p-2 text-[#3A322C]/50 font-mono text-[10px]">{idx + 1}</td>
                           <td className="p-2 font-medium">{row.name}</td>
                           <td className="p-2 font-mono">{row.phone}</td>
+                          <td className="p-2 text-[#3A322C]/70">{row.dob || '-'}</td>
                           <td className="p-2 text-[#8B3A3A] font-medium">{row.area || '-'}</td>
                           <td className="p-2 text-[#3A322C]/80">
                             {row.is_working === 'Yes' ? (row.occupation || 'Working') : (row.education_stream || row.study_details || '-')}
