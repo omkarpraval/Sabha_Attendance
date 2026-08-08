@@ -22,11 +22,14 @@ def get_public_leaderboard(db: Session = Depends(get_db)):
     ).all()
 
     ist_today = (datetime.utcnow() + timedelta(hours=5, minutes=30)).strftime("%Y-%m-%d")
-    total_events = db.query(Event).filter(
-        (Event.status == EventStatus.CLOSED) | (Event.event_date == ist_today)
-    ).count()
-    if total_events == 0:
-        total_events = 1
+    
+    # Total actual Sabhas conducted till now overall: events that have attendance records or are CLOSED
+    events_with_att_subquery = db.query(Attendance.event_id).distinct()
+    overall_conducted_events = db.query(Event).filter(
+        (Event.id.in_(events_with_att_subquery)) | (Event.status == EventStatus.CLOSED)
+    ).filter(Event.event_date <= ist_today).count()
+    if overall_conducted_events == 0:
+        overall_conducted_events = 1
 
     leaderboard_data = []
 
@@ -50,13 +53,8 @@ def get_public_leaderboard(db: Session = Depends(get_db)):
         # Fallback to lifetime_count if present_count is 0 but lifetime_count > 0
         final_present = present_count if present_count > 0 else (u.lifetime_count or 0)
 
-        # Per-user total events: only count CLOSED events or today's live event on/after user join date
-        user_created_date = u.created_at.strftime("%Y-%m-%d") if u.created_at else ist_today
-        user_total_events = db.query(Event).filter(
-            ((Event.status == EventStatus.CLOSED) | (Event.event_date == ist_today)),
-            Event.event_date >= user_created_date
-        ).count()
-        user_total_events = max(user_total_events, final_present, 1)
+        # Per-user total events overall
+        user_total_events = max(overall_conducted_events, final_present, 1)
         turnout_pct = min(100, round((final_present / user_total_events * 100)))
 
         avg_punctuality = sum(punctuality_minutes_list) / len(punctuality_minutes_list) if punctuality_minutes_list else 999.0
