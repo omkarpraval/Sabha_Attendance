@@ -1324,10 +1324,10 @@ export default function AdminPortal({ user, onUserUpdated }) {
                   <div>
                     <div className="flex justify-between text-xs font-semibold mb-1">
                       <span className="text-[#5B8C5B] flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> On Time (Before / +10m)</span>
-                      <span className="font-mono text-[#5B8C5B]">{analyticsData?.punctuality?.on_time_pct ?? 75}%</span>
+                      <span className="font-mono text-[#5B8C5B]">{analyticsData?.punctuality?.on_time_pct ?? 0}%</span>
                     </div>
                     <div className="w-full bg-[#EFE7DA]/60 h-2.5 rounded-full overflow-hidden">
-                      <div className="bg-[#5B8C5B] h-full rounded-full" style={{ width: `${analyticsData?.punctuality?.on_time_pct ?? 75}%` }} />
+                      <div className="bg-[#5B8C5B] h-full rounded-full" style={{ width: `${analyticsData?.punctuality?.on_time_pct ?? 0}%` }} />
                     </div>
                   </div>
 
@@ -1335,10 +1335,10 @@ export default function AdminPortal({ user, onUserUpdated }) {
                   <div>
                     <div className="flex justify-between text-xs font-semibold mb-1">
                       <span className="text-[#E8A33D] flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Grace Period (+10m to +30m)</span>
-                      <span className="font-mono text-[#E8A33D]">{analyticsData?.punctuality?.grace_pct ?? 18}%</span>
+                      <span className="font-mono text-[#E8A33D]">{analyticsData?.punctuality?.grace_pct ?? 0}%</span>
                     </div>
                     <div className="w-full bg-[#EFE7DA]/60 h-2.5 rounded-full overflow-hidden">
-                      <div className="bg-[#E8A33D] h-full rounded-full" style={{ width: `${analyticsData?.punctuality?.grace_pct ?? 18}%` }} />
+                      <div className="bg-[#E8A33D] h-full rounded-full" style={{ width: `${analyticsData?.punctuality?.grace_pct ?? 0}%` }} />
                     </div>
                   </div>
 
@@ -1346,17 +1346,20 @@ export default function AdminPortal({ user, onUserUpdated }) {
                   <div>
                     <div className="flex justify-between text-xs font-semibold mb-1">
                       <span className="text-[#C1554A] flex items-center gap-1"><AlertCircle className="w-3.5 h-3.5" /> Late Entry (+30m)</span>
-                      <span className="font-mono text-[#C1554A]">{analyticsData?.punctuality?.late_pct ?? 7}%</span>
+                      <span className="font-mono text-[#C1554A]">{analyticsData?.punctuality?.late_pct ?? 0}%</span>
                     </div>
                     <div className="w-full bg-[#EFE7DA]/60 h-2.5 rounded-full overflow-hidden">
-                      <div className="bg-[#C1554A] h-full rounded-full" style={{ width: `${analyticsData?.punctuality?.late_pct ?? 7}%` }} />
+                      <div className="bg-[#C1554A] h-full rounded-full" style={{ width: `${analyticsData?.punctuality?.late_pct ?? 0}%` }} />
                     </div>
                   </div>
                 </div>
               </div>
 
               <div className="mt-4 p-3 bg-[#FDFBF7] rounded-xl border border-[#EFE7DA] text-[11px] text-[#3A322C]/70 italic">
-                💡 Most members scan within 10 minutes of Sabha commencement.
+                {((analyticsData?.punctuality?.on_time_pct || 0) + (analyticsData?.punctuality?.grace_pct || 0) + (analyticsData?.punctuality?.late_pct || 0) === 0)
+                  ? "💡 No attendance scans recorded yet. Punctuality distribution will calculate automatically as members mark attendance."
+                  : "💡 Most members scan within 10 minutes of Sabha commencement."
+                }
               </div>
             </div>
           </div>

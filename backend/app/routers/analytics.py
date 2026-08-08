@@ -107,7 +107,7 @@ def get_dashboard_analytics(
 
     total_present_scans = on_time + grace_period + late_entry
     if total_present_scans == 0:
-        on_time_pct, grace_pct, late_pct = 75, 18, 7
+        on_time_pct, grace_pct, late_pct = 0, 0, 0
     else:
         on_time_pct = round((on_time / total_present_scans * 100))
         grace_pct = round((grace_period / total_present_scans * 100))
