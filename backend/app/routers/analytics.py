@@ -64,8 +64,31 @@ def get_dashboard_analytics(
             "turnout_pct": pct
         })
 
-    overall_turnout_pct = round((total_present / total_records * 100)) if total_records > 0 else 78
-    peak_sabha_day = max(day_counts, key=day_counts.get) if day_counts else "Saturday"
+    overall_turnout_pct = round((total_present / total_records * 100)) if total_records > 0 else 0
+
+    # Determine Peak Sabha Day from attendance counts or scheduled event days
+    if day_counts:
+        peak_sabha_day = max(day_counts, key=day_counts.get)
+    elif events:
+        event_days = {}
+        for ev in events:
+            try:
+                dt = datetime.datetime.strptime(ev.event_date, "%Y-%m-%d")
+                dname = dt.strftime("%A")
+                event_days[dname] = event_days.get(dname, 0) + 1
+            except Exception:
+                pass
+        peak_sabha_day = max(event_days, key=event_days.get) if event_days else "Sunday"
+    else:
+        peak_sabha_day = "Sunday"
+
+    # Calculate real turnout trend delta comparing latest 2 events
+    turnout_trend_delta = "0%"
+    if len(weekly_trends) >= 2:
+        last_pct = weekly_trends[-1]["turnout_pct"]
+        prev_pct = weekly_trends[-2]["turnout_pct"]
+        diff = last_pct - prev_pct
+        turnout_trend_delta = f"+{diff}%" if diff >= 0 else f"{diff}%"
 
     # 2. Punctuality Distribution (On-Time vs Grace vs Late)
     on_time = 0
@@ -179,7 +202,7 @@ def get_dashboard_analytics(
         "kpis": {
             "total_members": total_members,
             "overall_turnout_pct": overall_turnout_pct,
-            "turnout_trend_delta": "+4.2%",
+            "turnout_trend_delta": turnout_trend_delta,
             "streak_retention_pct": streak_retention_pct,
             "satsangi_count": satsangi_count,
             "gunbhavi_count": gunbhavi_count,

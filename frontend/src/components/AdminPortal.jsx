@@ -1013,10 +1013,10 @@ export default function AdminPortal({ user, onUserUpdated }) {
               </div>
               <div className="flex items-baseline justify-between">
                 <div className="font-serif-accent text-3xl font-bold text-[#8B3A3A]">
-                  {analyticsData?.kpis?.overall_turnout_pct ?? 78}%
+                  {analyticsData?.kpis?.overall_turnout_pct ?? 0}%
                 </div>
                 <div className="text-[11px] font-bold text-[#5B8C5B] bg-[#5B8C5B]/10 px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3" /> {analyticsData?.kpis?.turnout_trend_delta || '+4.2%'}
+                  <TrendingUp className="w-3 h-3" /> {analyticsData?.kpis?.turnout_trend_delta || '0%'}
                 </div>
               </div>
               <p className="text-[11px] text-[#3A322C]/60 mt-1">Average member attendance</p>
@@ -1031,7 +1031,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
                 </div>
               </div>
               <div className="font-serif-accent text-3xl font-bold text-[#E8A33D]">
-                {analyticsData?.kpis?.streak_retention_pct ?? 65}%
+                {analyticsData?.kpis?.streak_retention_pct ?? 0}%
               </div>
               <p className="text-[11px] text-[#3A322C]/60 mt-1">Members with 3+ week active streak</p>
             </div>
@@ -1045,7 +1045,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
                 </div>
               </div>
               <div className="font-serif-accent text-2xl font-bold text-[#3A322C]">
-                {analyticsData?.kpis?.satsangi_count ?? 0} <span className="text-xs text-[#5B8C5B] font-sans font-medium">Satsangi</span> / {(analyticsData?.kpis?.gunbhavi_count ?? analyticsData?.kpis?.bhavi_count ?? 0)} <span className="text-xs text-[#E8A33D] font-sans font-medium">Gunbhavi</span>
+                {analyticsData?.kpis?.satsangi_count ?? (allUsers?.filter(u => (u.member_category || 'satsangi').toLowerCase() === 'satsangi').length || 0)} <span className="text-xs text-[#5B8C5B] font-sans font-medium">Satsangi</span> / {(analyticsData?.kpis?.gunbhavi_count ?? (allUsers?.filter(u => ['gunbhavi', 'goon_bhavi', 'bhavi'].includes((u.member_category || '').toLowerCase())).length || 0))} <span className="text-xs text-[#E8A33D] font-sans font-medium">Gunbhavi</span>
               </div>
               <p className="text-[11px] text-[#3A322C]/60 mt-1">Total active member breakdown</p>
             </div>
@@ -1059,7 +1059,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
                 </div>
               </div>
               <div className="font-serif-accent text-2xl font-bold text-[#5B8C5B]">
-                {analyticsData?.kpis?.peak_sabha_day || 'Saturday'}
+                {analyticsData?.kpis?.peak_sabha_day || 'Sunday'}
               </div>
               <p className="text-[11px] text-[#3A322C]/60 mt-1">Highest turnout day of week</p>
             </div>
