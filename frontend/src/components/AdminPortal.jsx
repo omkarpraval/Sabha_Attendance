@@ -360,6 +360,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
   const [analyticsData, setAnalyticsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState('');
+  const [adminBirthdayData, setAdminBirthdayData] = useState({ today_birthdays: [], upcoming_birthdays: [] });
 
   // User Management Search & Filter State
   const [userSearchQuery, setUserSearchQuery] = useState('');
@@ -440,13 +441,14 @@ export default function AdminPortal({ user, onUserUpdated }) {
   const loadAdminData = async () => {
     try {
       setLoading(true);
-      const [evList, venList, pendList, usrList, attList, analyticsRes] = await Promise.all([
+      const [evList, venList, pendList, usrList, attList, analyticsRes, bdayRes] = await Promise.all([
         apiFetch('/events'),
         apiFetch('/venues'),
         apiFetch('/users/pending'),
         apiFetch('/users?status=approved'),
         apiFetch('/attendance/history'),
-        apiFetch('/analytics/dashboard').catch(() => null)
+        apiFetch('/analytics/dashboard').catch(() => null),
+        apiFetch('/public/birthdays').catch(() => ({ today_birthdays: [], upcoming_birthdays: [] }))
       ]);
 
       setEvents(evList);
@@ -455,6 +457,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
       setAllUsers(usrList);
       setAttendanceRecords(attList);
       if (analyticsRes) setAnalyticsData(analyticsRes);
+      setAdminBirthdayData(bdayRes || { today_birthdays: [], upcoming_birthdays: [] });
 
       if (venList.length > 0 && !eventForm.venue_id) {
         setEventForm(prev => ({ ...prev, venue_id: venList[0].id }));
@@ -1173,7 +1176,11 @@ export default function AdminPortal({ user, onUserUpdated }) {
 
           {/* 1.5 MEMBER BIRTHDAYS CARD (TODAY & PAST 7 DAYS) */}
           {(() => {
-            const birthdayList = getRecentBirthdays();
+            // Use backend /public/birthdays API data (IST-correct) for consistent display
+            const allBirthdays = [
+              ...(adminBirthdayData.today_birthdays || []).map(b => ({ ...b, isToday: true, isUpcoming: false, diffDays: 0 })),
+              ...(adminBirthdayData.upcoming_birthdays || []).map(b => ({ ...b, isToday: false, isUpcoming: true, diffDays: -b.days_until }))
+            ];
             return (
               <div className="bg-white rounded-2xl p-6 warm-shadow border border-[#EFE7DA] space-y-4">
                 <div className="flex items-center justify-between border-b border-[#EFE7DA] pb-3">
@@ -1185,27 +1192,27 @@ export default function AdminPortal({ user, onUserUpdated }) {
                       <h3 className="font-serif-accent text-lg font-bold text-[#8B3A3A] flex items-center gap-2">
                         <Cake className="w-5 h-5 text-[#8B3A3A]" />
                         <span>Member Birthday Celebrations</span>
-                        {birthdayList.length > 0 && (
+                        {allBirthdays.length > 0 && (
                           <span className="text-xs bg-[#5B8C5B]/15 text-[#5B8C5B] px-2.5 py-0.5 rounded-full font-sans font-bold">
-                            {birthdayList.length} recent
+                            {allBirthdays.length} recent
                           </span>
                         )}
                       </h3>
                       <p className="text-xs text-[#3A322C]/70">
-                        Members celebrating birthdays today, recent past, or upcoming days
+                        Members celebrating birthdays today or in upcoming days
                       </p>
                     </div>
                   </div>
                 </div>
 
-                {birthdayList.length === 0 ? (
+                {allBirthdays.length === 0 ? (
                   <div className="py-6 text-center text-xs text-[#3A322C]/60 italic flex items-center justify-center gap-1.5">
                     <Calendar className="w-4 h-4 text-[#3A322C]/40" />
-                    <span>No member birthdays today or in the past 7 days.</span>
+                    <span>No member birthdays today or in the upcoming days.</span>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {birthdayList.map((item, idx) => (
+                    {allBirthdays.map((item, idx) => (
                       <div
                         key={idx}
                         className={`p-3.5 rounded-xl border flex items-center justify-between transition-all ${
@@ -1216,7 +1223,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
                       >
                         <div>
                           <div className="flex items-center gap-1.5 font-bold text-xs text-[#3A322C]">
-                            <span>{item.user.name}</span>
+                            <span>{item.name}</span>
                             {item.isToday ? (
                               <span className="px-2 py-0.5 rounded-full text-[9px] bg-[#E8A33D] text-white font-bold uppercase tracking-wider">
                                 Birthday Today!
@@ -1229,19 +1236,19 @@ export default function AdminPortal({ user, onUserUpdated }) {
                           </div>
                           <div className="text-[11px] text-[#3A322C]/70 mt-0.5 flex items-center gap-1">
                             <Phone className="w-3 h-3 text-[#8B3A3A]" />
-                            <span>{item.user.phone} • {item.user.member_category === 'b2y' || item.user.member_category === 'bty' ? 'B2Y' : item.user.member_category === 'gunbhavi' || item.user.member_category === 'goon_bhavi' ? 'Gunbhavi' : 'Satsangi'}</span>
+                            <span>{item.phone} • {item.member_category === 'b2y' || item.member_category === 'bty' ? 'B2Y' : item.member_category === 'gunbhavi' || item.member_category === 'goon_bhavi' ? 'Gunbhavi' : 'Satsangi'}</span>
                           </div>
                         </div>
                         <div className="text-right">
                           <div className="text-xs font-bold text-[#8B3A3A]">
                             {item.isToday
-                              ? `Turning ${item.age}`
-                              : item.isUpcoming
-                              ? `In ${item.daysUntil} day${item.daysUntil > 1 ? 's' : ''}`
-                              : `${item.diffDays} day${item.diffDays > 1 ? 's' : ''} ago`}
+                              ? 'Today 🎂'
+                              : item.days_until === 1
+                              ? 'Tomorrow'
+                              : `In ${item.days_until} days`}
                           </div>
                           <div className="text-[10px] text-[#3A322C]/60 font-mono">
-                            {item.user.dob}
+                            {item.dob_formatted}
                           </div>
                         </div>
                       </div>

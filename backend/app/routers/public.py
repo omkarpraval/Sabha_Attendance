@@ -117,7 +117,9 @@ def get_public_birthdays(db: Session = Depends(get_db)):
     Returns approved members celebrating their birthday today (MM-DD match).
     Also includes upcoming birthdays if none today.
     """
-    today = date.today()
+    # Use IST date (UTC+5:30) instead of server UTC date
+    from datetime import timezone, timedelta, datetime as dt
+    today = (dt.now(timezone.utc) + timedelta(hours=5, minutes=30)).date()
     approved_users = db.query(User).filter(User.status == UserStatus.APPROVED).all()
 
     today_birthdays = []
