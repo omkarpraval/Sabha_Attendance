@@ -476,12 +476,59 @@ def delete_attendance_record(
     current_user: User = Depends(require_karyakar_or_admin),
     db: Session = Depends(get_db)
 ):
-    """Delete a single attendance record by ID."""
+    """Delete a single attendance record by ID. Recalculates affected user's streak and lifetime_count."""
     att = db.query(Attendance).filter(Attendance.id == attendance_id).first()
     if not att:
         raise HTTPException(status_code=404, detail="Attendance record not found")
 
+    # Fetch the user whose attendance is being deleted BEFORE deletion
+    affected_user = db.query(User).filter(User.id == att.user_id).first()
+
     db.query(AttendanceAudit).filter(AttendanceAudit.attendance_id == att.id).delete(synchronize_session=False)
     db.delete(att)
+    db.flush()  # flush so the record is deleted before recalculating
+
+    # Recalculate streak and lifetime_count from remaining attendance records
+    if affected_user:
+        remaining_atts = db.query(Attendance).filter(
+            Attendance.user_id == affected_user.id,
+            Attendance.status == AttendanceStatus.PRESENT
+        ).order_by(Attendance.id).all()
+
+        # Lifetime count = total present records remaining
+        affected_user.lifetime_count = len(remaining_atts)
+
+        # Streak = count of consecutive present records from the latest event backwards
+        # (simple: just count remaining present records as streak since we sort by event order)
+        if len(remaining_atts) == 0:
+            affected_user.current_streak = 0
+        else:
+            # Recount streak: consecutive present events from last event backward
+            # Get all events in order
+            event_ids = [a.event_id for a in remaining_atts]
+            all_events = db.query(Event).filter(Event.id.in_(event_ids)).order_by(Event.event_date, Event.start_time).all()
+            
+            # Build a set of event_ids where user was present
+            present_event_ids = set(event_ids)
+            
+            # Get ALL conducted events (by date order)
+            all_conducted = db.query(Event).filter(
+                Event.status.in_([EventStatus.CLOSED, EventStatus.OPEN])
+            ).order_by(Event.event_date.desc(), Event.start_time.desc()).all()
+
+            streak = 0
+            for ev in all_conducted:
+                if ev.id in present_event_ids:
+                    streak += 1
+                else:
+                    # Check if this event had any attendance at all (i.e., it was actually conducted)
+                    has_any_attendance = db.query(Attendance).filter(Attendance.event_id == ev.id).count()
+                    if has_any_attendance > 0:
+                        # Event was conducted and user missed — streak breaks
+                        break
+                    # Otherwise event has no attendance yet (maybe future/open), skip without breaking
+
+            affected_user.current_streak = streak
+
     db.commit()
     return {"status": "success", "message": "Attendance record deleted successfully."}
