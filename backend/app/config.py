@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 365  # 1 Year persistent login until explicit logout
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 365  # 1 Year
     DATABASE_URL: str = "sqlite:///./sabha_attendance.db"
-    FRONTEND_URL: str = "http://localhost:5173"
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://sabha-attendance.vercel.app")
     
     # VAPID keys for Web Push Notifications
     VAPID_PUBLIC_KEY: str = "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgD8RjWJv-Q2K757279-L-0129-L0129"

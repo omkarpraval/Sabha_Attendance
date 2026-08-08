@@ -1,16 +1,18 @@
 import qrcode
 import io
 import base64
+from app.config import settings
 
-def format_qr_url(data: str, base_url: str = "http://localhost:5173") -> str:
+def format_qr_url(data: str, base_url: str = None) -> str:
     """Formats raw QR reference into a full website URL for native camera scanning."""
     if not data:
         return ""
     if data.startswith("http://") or data.startswith("https://"):
         return data
-    return f"{base_url.rstrip('/')}/?qr_ref={data}"
+    target_url = base_url or settings.FRONTEND_URL
+    return f"{target_url.rstrip('/')}/?qr_ref={data}"
 
-def generate_qr_base64(data: str, base_url: str = "http://localhost:5173") -> str:
+def generate_qr_base64(data: str, base_url: str = None) -> str:
     """Generates a QR code image as a base64 encoded PNG string containing portal URL."""
     url_to_encode = format_qr_url(data, base_url)
 
