@@ -1044,8 +1044,8 @@ export default function AdminPortal({ user, onUserUpdated }) {
                   <Users className="w-4 h-4" />
                 </div>
               </div>
-              <div className="font-serif-accent text-2xl font-bold text-[#3A322C]">
-                {analyticsData?.kpis?.satsangi_count ?? (allUsers?.filter(u => (u.member_category || 'satsangi').toLowerCase() === 'satsangi').length || 0)} <span className="text-xs text-[#5B8C5B] font-sans font-medium">Satsangi</span> / {(analyticsData?.kpis?.gunbhavi_count ?? (allUsers?.filter(u => ['gunbhavi', 'goon_bhavi', 'bhavi'].includes((u.member_category || '').toLowerCase())).length || 0))} <span className="text-xs text-[#E8A33D] font-sans font-medium">Gunbhavi</span>
+              <div className="font-serif-accent text-xl font-bold text-[#3A322C]">
+                {analyticsData?.kpis?.satsangi_count ?? (allUsers?.filter(u => (u.member_category || 'satsangi').toLowerCase() === 'satsangi').length || 0)} <span className="text-xs text-[#5B8C5B] font-sans font-medium">Satsangi</span> / {(analyticsData?.kpis?.gunbhavi_count ?? (allUsers?.filter(u => ['gunbhavi', 'goon_bhavi', 'bhavi'].includes((u.member_category || '').toLowerCase())).length || 0))} <span className="text-xs text-[#E8A33D] font-sans font-medium">Gunbhavi</span> / {(analyticsData?.kpis?.bty_count ?? (allUsers?.filter(u => (u.member_category || '').toLowerCase() === 'bty').length || 0))} <span className="text-xs text-[#8B3A3A] font-sans font-medium">BTY</span>
               </div>
               <p className="text-[11px] text-[#3A322C]/60 mt-1">Total active member breakdown</p>
             </div>
@@ -1123,7 +1123,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
                           </div>
                           <div className="text-[11px] text-[#3A322C]/70 mt-0.5 flex items-center gap-1">
                             <Phone className="w-3 h-3 text-[#8B3A3A]" />
-                            <span>{item.user.phone} • {item.user.member_category === 'gunbhavi' || item.user.member_category === 'goon_bhavi' ? 'Gunbhavi' : 'Satsangi'}</span>
+                            <span>{item.user.phone} • {item.user.member_category === 'bty' ? 'BTY' : item.user.member_category === 'gunbhavi' || item.user.member_category === 'goon_bhavi' ? 'Gunbhavi' : 'Satsangi'}</span>
                           </div>
                         </div>
                         <div className="text-right">
@@ -2574,7 +2574,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
 
                                     <td className="p-3 font-mono text-[11px] text-[#8B3A3A] font-medium">
                                       {r?.timestamp_utc ? (
-                                        new Date(r.timestamp_utc).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) + ' IST'
+                                        new Date(String(r.timestamp_utc).endsWith('Z') || String(r.timestamp_utc).includes('+') ? r.timestamp_utc : String(r.timestamp_utc) + 'Z').toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) + ' IST'
                                       ) : (
                                         <span className="text-[#3A322C]/40">-</span>
                                       )}
@@ -2713,7 +2713,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
                             </td>
                             <td className="p-3 font-mono text-[11px] text-[#8B3A3A] font-medium">
                               {r.timestamp_utc ? (
-                                new Date(r.timestamp_utc).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) + ' IST'
+                                new Date(String(r.timestamp_utc).endsWith('Z') || String(r.timestamp_utc).includes('+') ? r.timestamp_utc : String(r.timestamp_utc) + 'Z').toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) + ' IST'
                               ) : (
                                 <span className="text-[#3A322C]/40">-</span>
                               )}

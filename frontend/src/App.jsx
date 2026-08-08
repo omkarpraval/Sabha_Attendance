@@ -110,12 +110,14 @@ export default function App() {
             })
           });
 
-          const formattedTime = new Date(res.timestamp_utc).toLocaleTimeString('en-IN', {
+          const rawTime = res.timestamp_utc ? String(res.timestamp_utc) : '';
+          const isoStr = (rawTime.includes('T') && !rawTime.endsWith('Z') && !rawTime.includes('+')) ? rawTime + 'Z' : rawTime;
+          const formattedTime = isoStr ? new Date(isoStr).toLocaleTimeString('en-IN', {
             timeZone: 'Asia/Kolkata',
             hour: '2-digit',
             minute: '2-digit',
             hour12: true
-          });
+          }) : '';
 
           setAutoScanNotice({
             status: 'success',

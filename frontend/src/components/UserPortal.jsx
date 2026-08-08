@@ -170,13 +170,16 @@ export default function UserPortal({ user, onUserUpdated }) {
   const formatISTTime = (utcIsoString) => {
     if (!utcIsoString) return '';
     try {
-      return new Date(utcIsoString).toLocaleTimeString('en-IN', {
+      let str = String(utcIsoString).trim();
+      if (str.includes('T') && !str.endsWith('Z') && !str.includes('+')) {
+        str += 'Z';
+      }
+      return new Date(str).toLocaleTimeString('en-IN', {
         timeZone: 'Asia/Kolkata',
         hour: '2-digit',
         minute: '2-digit',
-        second: '2-digit',
         hour12: true
-      }) + ' IST';
+      });
     } catch (e) {
       return utcIsoString;
     }

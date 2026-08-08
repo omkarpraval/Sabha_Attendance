@@ -146,7 +146,7 @@ def scan_and_mark_attendance(
         user_lat=req.latitude,
         user_long=req.longitude,
         distance_meters=round(distance, 1),
-        timestamp_utc=datetime.datetime.utcnow()
+        timestamp_utc=datetime.datetime.now(datetime.timezone.utc)
     )
     db.add(attendance)
 
