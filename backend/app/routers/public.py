@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import List, Optional
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -21,10 +21,8 @@ def get_public_leaderboard(db: Session = Depends(get_db)):
         User.status == UserStatus.APPROVED
     ).all()
 
-    today_str = datetime.now().strftime("%Y-%m-%d")
-    total_events = db.query(Event).filter(
-        (Event.status.in_([EventStatus.CLOSED, EventStatus.OPEN])) | (Event.event_date <= today_str)
-    ).count()
+    ist_today = (datetime.utcnow() + timedelta(hours=5, minutes=30)).strftime("%Y-%m-%d")
+    total_events = db.query(Event).filter(Event.event_date <= ist_today).count()
     if total_events == 0:
         total_events = 1
 
@@ -227,10 +225,8 @@ def get_public_stats(db: Session = Depends(get_db)):
     Returns public aggregate counts for home page floating counters.
     """
     total_attendances = db.query(Attendance).count()
-    today_str = datetime.now().strftime("%Y-%m-%d")
-    total_events = db.query(Event).filter(
-        (Event.status.in_([EventStatus.CLOSED, EventStatus.OPEN])) | (Event.event_date <= today_str)
-    ).count()
+    ist_today = (datetime.utcnow() + timedelta(hours=5, minutes=30)).strftime("%Y-%m-%d")
+    total_events = db.query(Event).filter(Event.event_date <= ist_today).count()
     total_members = db.query(User).filter(User.status == UserStatus.APPROVED).count()
 
     return {
