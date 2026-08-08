@@ -1761,8 +1761,8 @@ export default function AdminPortal({ user, onUserUpdated }) {
                           </div>
                           <div className="text-[10px] font-semibold text-[#8B3A3A] pt-0.5 flex items-center gap-1">
                             <span>Type:</span>
-                            {ev.qr_mode === 'reusable' ? (
-                              <span className="inline-flex items-center gap-1 text-[#8B3A3A]"><RefreshCw className="w-3 h-3" /> Recurring</span>
+                            {ev.qr_mode === 'reusable' || (ev.qr_code_reference && ev.qr_code_reference.startsWith('recurring_')) ? (
+                              <span className="inline-flex items-center gap-1 text-[#8B3A3A]"><RefreshCw className="w-3 h-3" /> Recurring Sabha</span>
                             ) : (
                               <span className="inline-flex items-center gap-1 text-[#E8A33D]"><Zap className="w-3 h-3" /> Special One-Time</span>
                             )}

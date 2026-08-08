@@ -176,8 +176,10 @@ def create_events(
         dates = calculate_recurring_dates(req.event_date, day_name, req.recurring_weeks)
         # Consistent permanent QR code reference for all recurring weekly sessions of this day & venue
         qr_ref = f"recurring_venue_{venue.id}_{day_name}"
+        event_qr_mode = QRMode.REUSABLE
     else:
         dates = [req.event_date]
+        event_qr_mode = req.qr_mode or QRMode.PER_EVENT
         if req.qr_mode == QRMode.REUSABLE:
             qr_ref = venue.qr_code_reference
         else:
@@ -191,7 +193,7 @@ def create_events(
             start_time=req.start_time,
             end_time=req.end_time,
             venue_id=req.venue_id,
-            qr_mode=req.qr_mode,
+            qr_mode=event_qr_mode,
             qr_code_reference=qr_ref,
             status=EventStatus.OPEN,
             created_by_id=current_user.id
