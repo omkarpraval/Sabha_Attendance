@@ -55,6 +55,18 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (user) {
+      if (user.role === 'admin') {
+        document.title = '🛕 Admin Portal — Sabha Attendance';
+      } else if (user.role === 'karyakar') {
+        document.title = '🛕 Karyakar Portal — Sabha Attendance';
+      } else {
+        document.title = '🛕 Yuvak Portal — Sabha Attendance';
+      }
+    } else {
+      document.title = '🛕 Sabha Attendance — BAPS Mandir QR & Geofence Portal';
+    }
+
     if (user && !loading) {
       const pendingRef = sessionStorage.getItem('pending_qr_ref');
       if (pendingRef) {
