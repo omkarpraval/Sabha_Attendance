@@ -23,6 +23,8 @@ try:
         conn.execute(text("UPDATE users SET member_category = 'gunbhavi' WHERE member_category IN ('goon_bhavi', 'bhavi');"))
         conn.execute(text("UPDATE users SET member_category = 'b2y' WHERE LOWER(member_category) = 'bty';"))
         conn.execute(text("UPDATE users SET role = 'yuvak' WHERE role = 'user';"))
+        conn.execute(text("DELETE FROM attendance WHERE event_id IN (SELECT id FROM events WHERE title IN ('Weekly Saturday Sabha - Past', 'Weekly Saturday Sabha - Live', 'Special Janmashtami Maha Sabha'));"))
+        conn.execute(text("DELETE FROM events WHERE title IN ('Weekly Saturday Sabha - Past', 'Weekly Saturday Sabha - Live', 'Special Janmashtami Maha Sabha');"))
         conn.commit()
 except Exception:
     pass

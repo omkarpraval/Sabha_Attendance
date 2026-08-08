@@ -22,7 +22,9 @@ def get_public_leaderboard(db: Session = Depends(get_db)):
     ).all()
 
     ist_today = (datetime.utcnow() + timedelta(hours=5, minutes=30)).strftime("%Y-%m-%d")
-    total_events = db.query(Event).filter(Event.event_date <= ist_today).count()
+    total_events = db.query(Event).filter(
+        (Event.status == EventStatus.CLOSED) | (Event.event_date == ist_today)
+    ).count()
     if total_events == 0:
         total_events = 1
 
@@ -48,10 +50,10 @@ def get_public_leaderboard(db: Session = Depends(get_db)):
         # Fallback to lifetime_count if present_count is 0 but lifetime_count > 0
         final_present = present_count if present_count > 0 else (u.lifetime_count or 0)
 
-        # Per-user total events: only count Sabhas held on or after user join date up to today
+        # Per-user total events: only count CLOSED events or today's live event on/after user join date
         user_created_date = u.created_at.strftime("%Y-%m-%d") if u.created_at else ist_today
         user_total_events = db.query(Event).filter(
-            Event.event_date <= ist_today,
+            ((Event.status == EventStatus.CLOSED) | (Event.event_date == ist_today)),
             Event.event_date >= user_created_date
         ).count()
         user_total_events = max(user_total_events, final_present, 1)

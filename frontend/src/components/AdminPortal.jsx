@@ -1492,7 +1492,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
         const recurringGroups = Object.values(recurringGroupMap);
 
         // 3. Common Finished & Special Events History (All Concluded & Special Events)
-        const searchedClosedEvents = searchedEvents.filter(ev => ev.status === 'closed' || ev.qr_mode === 'per_event');
+        const searchedClosedEvents = searchedEvents.filter(ev => ev.status === 'closed');
 
         return (
           <div className="space-y-6">
@@ -1761,7 +1761,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
                           </div>
                           <div className="text-[10px] font-semibold text-[#8B3A3A] pt-0.5 flex items-center gap-1">
                             <span>Type:</span>
-                            {ev.qr_mode === 'reusable' || (ev.qr_code_reference && ev.qr_code_reference.startsWith('recurring_')) ? (
+                            {ev.qr_mode === 'reusable' || (ev.qr_code_reference && (ev.qr_code_reference.startsWith('recurring_') || ev.qr_code_reference.startsWith('venue_'))) || (ev.title || '').toLowerCase().includes('sabha') || (ev.title || '').toLowerCase().includes('saturday') || (ev.title || '').toLowerCase().includes('sunday') ? (
                               <span className="inline-flex items-center gap-1 text-[#8B3A3A]"><RefreshCw className="w-3 h-3" /> Recurring Sabha</span>
                             ) : (
                               <span className="inline-flex items-center gap-1 text-[#E8A33D]"><Zap className="w-3 h-3" /> Special One-Time</span>
