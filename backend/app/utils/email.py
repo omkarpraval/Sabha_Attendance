@@ -1,3 +1,6 @@
+import os
+import json
+import urllib.request
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -8,14 +11,10 @@ logger = logging.getLogger(__name__)
 
 def send_password_reset_email(user_email: str, user_name: str, reset_token: str, reset_link: str) -> bool:
     """
-    Sends a beautifully formatted HTML password reset email via Zoho SMTP.
-    The reset link is valid for 15 minutes and is single-use.
+    Sends a beautifully formatted HTML password reset email.
+    Supports HTTPS Email APIs (Resend, Brevo) over Port 443 as well as SMTP (465, 587).
     """
-    if not settings.SMTP_HOST or not settings.SMTP_USERNAME or not settings.SMTP_PASSWORD:
-        logger.warning("SMTP credentials not fully configured in settings.")
-        return False
-
-    sender_email = settings.EMAIL_FROM or settings.SMTP_USERNAME
+    sender_email = settings.EMAIL_FROM or settings.SMTP_USERNAME or "sabha@attendance.org"
     subject = "🛕 Password Reset Request — Sabha Attendance System"
 
     # HTML Email Template
@@ -168,6 +167,52 @@ def send_password_reset_email(user_email: str, user_name: str, reset_token: str,
       # Attach HTML version
       part = MIMEText(html_content, "html")
       message.attach(part)
+
+      # Attempt 0: Check HTTPS Email API (Resend / Brevo) over Port 443 (Never blocked by cloud hosts)
+      resend_key = getattr(settings, 'RESEND_API_KEY', '') or os.environ.get('RESEND_API_KEY', '')
+      brevo_key = getattr(settings, 'BREVO_API_KEY', '') or os.environ.get('BREVO_API_KEY', '')
+
+      if resend_key:
+          try:
+              req_data = json.dumps({
+                  "from": "Sabha Attendance <onboarding@resend.dev>",
+                  "to": [user_email],
+                  "subject": subject,
+                  "html": html_content
+              }).encode("utf-8")
+              req_obj = urllib.request.Request(
+                  "https://api.resend.com/emails",
+                  data=req_data,
+                  headers={"Authorization": f"Bearer {resend_key}", "Content-Type": "application/json"},
+                  method="POST"
+              )
+              with urllib.request.urlopen(req_obj, timeout=10) as resp:
+                  if resp.status in [200, 201]:
+                      logger.info(f"Successfully sent password reset email to {user_email} via Resend HTTPS API")
+                      return True
+          except Exception as e_resend:
+              logger.warning(f"Resend HTTPS API failed: {e_resend}")
+
+      if brevo_key:
+          try:
+              req_data = json.dumps({
+                  "sender": {"name": "Sabha Attendance System", "email": sender_email},
+                  "to": [{"email": user_email}],
+                  "subject": subject,
+                  "htmlContent": html_content
+              }).encode("utf-8")
+              req_obj = urllib.request.Request(
+                  "https://api.brevo.com/v3/smtp/email",
+                  data=req_data,
+                  headers={"api-key": brevo_key, "Content-Type": "application/json"},
+                  method="POST"
+              )
+              with urllib.request.urlopen(req_obj, timeout=10) as resp:
+                  if resp.status in [200, 201]:
+                      logger.info(f"Successfully sent password reset email to {user_email} via Brevo HTTPS API")
+                      return True
+          except Exception as e_brevo:
+              logger.warning(f"Brevo HTTPS API failed: {e_brevo}")
 
       # Try SSL on Port 465 first (works reliably on Render cloud hosts), fallback to Port 587 (STARTTLS)
       sent = False

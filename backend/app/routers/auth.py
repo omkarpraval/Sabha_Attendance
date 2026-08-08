@@ -123,11 +123,12 @@ def forgot_password(req: ForgotPasswordRequest, request: Request, db: Session = 
 
     if not email_sent:
         return {
-            "message": f"Password reset link generated for {user.email}. (Note: SMTP error occurred. Dev Link: {reset_link})",
-            "dev_reset_link": reset_link
+            "message": f"Password reset token generated for {user.email}.",
+            "dev_reset_link": reset_link,
+            "reset_token": reset_token
         }
 
-    return {"message": f"Password reset link has been sent to {user.email}. Please check your inbox."}
+    return {"message": f"Password reset link has been sent to {user.email}. Please check your inbox.", "reset_token": reset_token}
 
 @router.post("/reset-password")
 def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_db)):

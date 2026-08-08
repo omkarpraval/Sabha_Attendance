@@ -15,13 +15,17 @@ class Settings(BaseSettings):
     VAPID_PRIVATE_KEY: str = "u8_81928391283912831293819238123"
     VAPID_CLAIMS_SUB: str = "mailto:admin@sabha.org"
 
-    # SMTP Email configuration (Zoho SMTP)
+    # SMTP & HTTPS Email configuration
     SMTP_HOST: str = "smtp.zoho.in"
     SMTP_PORT: int = 465
     SMTP_USERNAME: str = "omkarpraval@zohomail.in"
     SMTP_PASSWORD: str = "vmWcGaLrCySv"
     EMAIL_FROM: str = "omkarpraval@zohomail.in"
     SMTP_USE_TLS: bool = False
+
+    # HTTP Email API Keys (Port 443 HTTPS - bypasses cloud socket blocks)
+    RESEND_API_KEY: str = ""
+    BREVO_API_KEY: str = ""
 
     # Initial Admin Accounts for Automatic Production Bootstrapping
     INITIAL_ADMIN_PHONE_1: str = ""
