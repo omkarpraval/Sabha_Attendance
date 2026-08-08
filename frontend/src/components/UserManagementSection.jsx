@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, UserPlus, Pencil, CheckCircle2, AlertCircle, Eye, EyeOff, Lock, User, Phone, Mail, Calendar, Shield, Sparkles, X, Trash2, UploadCloud, FileSpreadsheet, Download, Cake, MapPin, Briefcase, GraduationCap } from 'lucide-react';
+import { Search, UserPlus, Pencil, CheckCircle2, AlertCircle, Eye, EyeOff, Lock, User, Phone, Mail, Calendar, Shield, Sparkles, X, Trash2, UploadCloud, FileSpreadsheet, Download, Cake, MapPin, Briefcase, GraduationCap, UserCheck } from 'lucide-react';
 import { apiFetch } from '../api';
 
 export default function UserManagementSection({ currentUser }) {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, UserCheck, CheckCircle2, XCircle, Clock, Eye, QrCode, ShieldAlert, Award, Calendar, ChevronDown, Users, BarChart3, TrendingUp } from 'lucide-react';
+import { Search, UserCheck, CheckCircle2, XCircle, Clock, Eye, QrCode, ShieldAlert, Award, Calendar, ChevronDown, Users, BarChart3, TrendingUp, X, Filter, User } from 'lucide-react';
 import { apiFetch } from '../api';
 import QRScannerModal from './QRScannerModal';
 import UserManagementSection from './UserManagementSection';
