@@ -469,3 +469,19 @@ def get_attendance_audits(
             timestamp_utc=a.timestamp_utc
         ))
     return res
+
+@router.delete("/{attendance_id}")
+def delete_attendance_record(
+    attendance_id: int,
+    current_user: User = Depends(require_karyakar_or_admin),
+    db: Session = Depends(get_db)
+):
+    """Delete a single attendance record by ID."""
+    att = db.query(Attendance).filter(Attendance.id == attendance_id).first()
+    if not att:
+        raise HTTPException(status_code=404, detail="Attendance record not found")
+
+    db.query(AttendanceAudit).filter(AttendanceAudit.attendance_id == att.id).delete(synchronize_session=False)
+    db.delete(att)
+    db.commit()
+    return {"status": "success", "message": "Attendance record deleted successfully."}

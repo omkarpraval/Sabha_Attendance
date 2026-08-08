@@ -774,6 +774,20 @@ export default function AdminPortal({ user, onUserUpdated }) {
     }
   };
 
+  // Delete Single Event Record
+  const handleDeleteSingleEvent = async (ev) => {
+    if (!window.confirm(`Are you sure you want to delete event record "${ev.title}" (${ev.event_date})?\n\nThis will permanently remove this event record and all its associated attendance logs.`)) return;
+    try {
+      await apiFetch(`/events/${ev.id}`, {
+        method: 'DELETE'
+      });
+      showToast(`Event record "${ev.title}" deleted successfully.`);
+      loadAdminData();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   // Close Event
   const handleCloseEvent = async (eventId) => {
     if (!window.confirm("Are you sure you want to close attendance for this event? This will auto-mark ABSENT for all unrecorded members and reset their streaks.")) return;
@@ -1610,6 +1624,13 @@ export default function AdminPortal({ user, onUserUpdated }) {
                     >
                       <Lock className="w-4 h-4" /> Close Sabha
                     </button>
+                    <button
+                      onClick={() => handleDeleteSingleEvent(primaryLiveEvent)}
+                      className="bg-[#C1554A]/10 hover:bg-[#C1554A]/20 text-[#C1554A] border border-[#C1554A]/30 font-semibold text-xs py-2.5 px-4 rounded-xl cursor-pointer flex items-center justify-center gap-1.5 flex-1 md:flex-none transition-colors"
+                      title="Delete Live Event Record"
+                    >
+                      <Trash2 className="w-4 h-4" /> Delete Event
+                    </button>
                   </div>
                 </div>
               ) : (
@@ -1772,9 +1793,9 @@ export default function AdminPortal({ user, onUserUpdated }) {
 
                       <div className="space-y-1.5 pt-2 border-t border-[#EFE7DA]">
                         <div className="text-[10px] font-bold uppercase text-[#8B3A3A] tracking-wider">
-                          Download Event Report:
+                          Actions & Event Reports:
                         </div>
-                        <div className="grid grid-cols-2 gap-1.5">
+                        <div className="grid grid-cols-2 gap-1.5 mb-1.5">
                           <button
                             type="button"
                             onClick={() => handleExportEventPDF(ev.id, ev.title, ev.event_date)}
@@ -1790,6 +1811,13 @@ export default function AdminPortal({ user, onUserUpdated }) {
                             <FileSpreadsheet className="w-3.5 h-3.5" /> Export Excel
                           </button>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteSingleEvent(ev)}
+                          className="w-full bg-[#C1554A]/10 hover:bg-[#C1554A]/20 text-[#C1554A] border border-[#C1554A]/30 font-semibold text-xs py-1.5 px-2 rounded-lg flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" /> Delete Event Record
+                        </button>
                       </div>
                     </div>
                   ))}
