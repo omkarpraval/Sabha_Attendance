@@ -1079,6 +1079,96 @@ export default function AdminPortal({ user, onUserUpdated }) {
             </div>
           </div>
 
+          {/* 1.4 🚨 PENDING ACCOUNT APPROVALS SECTION */}
+          {pendingUsers && pendingUsers.length > 0 && (
+            <div className="bg-[#FFF8F0] rounded-2xl p-5 sm:p-6 warm-shadow border-2 border-[#E8A33D] space-y-4 animate-in fade-in duration-300">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-[#E8A33D]/30 pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-[#E8A33D] text-white shadow-md animate-pulse shrink-0">
+                    <UserPlus className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif-accent text-lg font-bold text-[#8B3A3A] flex items-center gap-2 flex-wrap">
+                      <span>Pending Account Approvals</span>
+                      <span className="text-xs bg-[#8B3A3A] text-white px-2.5 py-0.5 rounded-full font-sans font-bold shadow-xs">
+                        {pendingUsers.length} Action Needed
+                      </span>
+                    </h3>
+                    <p className="text-xs text-[#3A322C]/70">
+                      New members registered and awaiting Admin verification before they can log in
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {pendingUsers.map((pUser) => (
+                  <div
+                    key={pUser.id}
+                    className="p-4 rounded-xl bg-white border border-[#EFE7DA] shadow-xs space-y-3 flex flex-col justify-between"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h4 className="font-bold text-sm text-[#3A322C]">{pUser.name}</h4>
+                          <p className="text-xs text-[#3A322C]/70 flex items-center gap-1 mt-0.5">
+                            <Phone className="w-3 h-3 text-[#8B3A3A]" />
+                            <span>{pUser.phone}</span>
+                          </p>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#E8A33D]/20 text-[#D98A2B] uppercase shrink-0">
+                          {pUser.member_category || 'Satsangi'}
+                        </span>
+                      </div>
+
+                      <div className="text-[11px] text-[#3A322C]/70 space-y-1 pt-1 border-t border-[#EFE7DA]">
+                        {pUser.email && (
+                          <div className="flex items-center gap-1 truncate">
+                            <Mail className="w-3 h-3 text-[#8B3A3A] shrink-0" />
+                            <span className="truncate">{pUser.email}</span>
+                          </div>
+                        )}
+                        {pUser.area && (
+                          <div className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3 text-[#8B3A3A] shrink-0" />
+                            <span>Area: {pUser.area}</span>
+                          </div>
+                        )}
+                        {pUser.dob && (
+                          <div className="flex items-center gap-1">
+                            <Cake className="w-3 h-3 text-[#8B3A3A] shrink-0" />
+                            <span>DOB: {pUser.dob}</span>
+                          </div>
+                        )}
+                        {(pUser.occupation || pUser.company_name) && (
+                          <div className="flex items-center gap-1">
+                            <Briefcase className="w-3 h-3 text-[#8B3A3A] shrink-0" />
+                            <span>{pUser.occupation || ''} {pUser.company_name ? `at ${pUser.company_name}` : ''}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-2 border-t border-[#EFE7DA]">
+                      <button
+                        onClick={() => handleApproveUser(pUser.id)}
+                        className="flex-1 bg-[#15803D] hover:bg-[#166534] text-white font-semibold text-xs py-2 px-3 rounded-lg flex items-center justify-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                      >
+                        <UserCheck className="w-3.5 h-3.5" /> Approve
+                      </button>
+                      <button
+                        onClick={() => handleRejectUser(pUser.id)}
+                        className="flex-1 bg-[#C1554A] hover:bg-[#A8453B] text-white font-semibold text-xs py-2 px-3 rounded-lg flex items-center justify-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* 1.5 MEMBER BIRTHDAYS CARD (TODAY & PAST 7 DAYS) */}
           {(() => {
             const birthdayList = getRecentBirthdays();

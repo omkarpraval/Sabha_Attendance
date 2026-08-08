@@ -8,6 +8,7 @@ export default function UserManagementSection({ currentUser }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -16,6 +17,27 @@ export default function UserManagementSection({ currentUser }) {
   // Notification status
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  const handleApproveUser = async (user) => {
+    try {
+      await apiFetch(`/users/${user.id}/approve`, { method: 'POST' });
+      setSuccess(`Account for "${user.name}" approved successfully!`);
+      fetchUsers();
+    } catch (err) {
+      setError(err.message || 'Failed to approve user.');
+    }
+  };
+
+  const handleRejectUser = async (user) => {
+    if (!window.confirm(`Are you sure you want to reject and remove registration for "${user.name}"?`)) return;
+    try {
+      await apiFetch(`/users/${user.id}/reject`, { method: 'POST' });
+      setSuccess(`User registration for "${user.name}" rejected.`);
+      fetchUsers();
+    } catch (err) {
+      setError(err.message || 'Failed to reject user.');
+    }
+  };
 
   // Modal states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -329,13 +351,14 @@ export default function UserManagementSection({ currentUser }) {
       (u.email && u.email.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const matchesRole = roleFilter === 'all' || u.role === roleFilter;
+    const matchesStatus = statusFilter === 'all' || u.status === statusFilter;
     const userCat = (u.member_category || 'satsangi').toLowerCase();
     const matchesCategory = categoryFilter === 'all' || 
       (categoryFilter === 'b2y' ? ['b2y', 'bty'].includes(userCat) :
        categoryFilter === 'gunbhavi' ? ['gunbhavi', 'goon_bhavi', 'bhavi'].includes(userCat) :
        userCat === categoryFilter);
 
-    return matchesSearch && matchesRole && matchesCategory;
+    return matchesSearch && matchesRole && matchesStatus && matchesCategory;
   });
 
   return (
@@ -402,16 +425,28 @@ export default function UserManagementSection({ currentUser }) {
       )}
 
       {/* Filters & Search */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <div className="relative">
           <Search className="w-4 h-4 absolute left-3 top-3 text-[#3A322C]/40" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by name, phone, or email..."
+            placeholder="Search name, phone, or email..."
             className="w-full pl-9 pr-4 py-2 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-xs text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
           />
+        </div>
+
+        <div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full px-3 py-2 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-xs text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
+          >
+            <option value="all">All Account Statuses</option>
+            <option value="pending">Pending Approval ({users.filter(u => u.status === 'pending').length})</option>
+            <option value="approved">Approved Members ({users.filter(u => u.status === 'approved').length})</option>
+          </select>
         </div>
 
         <div>
@@ -517,6 +552,16 @@ export default function UserManagementSection({ currentUser }) {
                       </td>
                       <td className="p-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {u.status === 'pending' && (
+                            <button
+                              onClick={() => handleApproveUser(u)}
+                              className="px-2.5 py-1.5 rounded-lg bg-[#15803D] hover:bg-[#166534] text-white text-xs font-semibold transition-all inline-flex items-center gap-1 cursor-pointer shadow-2xs"
+                              title="Approve Member Account"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Approve</span>
+                            </button>
+                          )}
                           <button
                             onClick={() => handleOpenEditModal(u)}
                             className="px-2.5 py-1.5 rounded-lg bg-[#FDFBF7] hover:bg-[#8B3A3A] text-[#8B3A3A] hover:text-white border border-[#8B3A3A]/30 text-xs font-semibold transition-all inline-flex items-center gap-1 cursor-pointer"

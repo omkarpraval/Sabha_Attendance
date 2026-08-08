@@ -239,6 +239,21 @@ def approve_user(
     db.refresh(target)
     return target
 
+@router.post("/{user_id}/reject", response_model=UserResponse)
+def reject_user(
+    user_id: int,
+    current_user: User = Depends(require_karyakar_or_admin),
+    db: Session = Depends(get_db)
+):
+    """Reject user account."""
+    target = db.query(User).filter(User.id == user_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    target.status = UserStatus.REJECTED
+    db.commit()
+    db.refresh(target)
+    return target
+
 @router.post("/{user_id}/role", response_model=UserResponse)
 def update_user_role(
     user_id: int,
