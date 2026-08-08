@@ -1,6 +1,7 @@
 import os
 import json
 import urllib.request
+import urllib.error
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -190,6 +191,10 @@ def send_password_reset_email(user_email: str, user_name: str, reset_token: str,
                   if resp.status in [200, 201]:
                       logger.info(f"Successfully sent password reset email to {user_email} via Resend HTTPS API")
                       return True
+          except urllib.error.HTTPError as e_resend:
+              err_body = e_resend.read().decode("utf-8") if e_resend.fp else str(e_resend)
+              logger.warning(f"Resend HTTPS API failed (HTTP {e_resend.code}): {err_body}")
+              print(f"[RESEND ERROR] HTTP {e_resend.code}: {err_body}")
           except Exception as e_resend:
               logger.warning(f"Resend HTTPS API failed: {e_resend}")
 
@@ -211,6 +216,10 @@ def send_password_reset_email(user_email: str, user_name: str, reset_token: str,
                   if resp.status in [200, 201]:
                       logger.info(f"Successfully sent password reset email to {user_email} via Brevo HTTPS API")
                       return True
+          except urllib.error.HTTPError as e_brevo:
+              err_body = e_brevo.read().decode("utf-8") if e_brevo.fp else str(e_brevo)
+              logger.warning(f"Brevo HTTPS API failed (HTTP {e_brevo.code}): {err_body}")
+              print(f"[BREVO ERROR] HTTP {e_brevo.code}: {err_body}")
           except Exception as e_brevo:
               logger.warning(f"Brevo HTTPS API failed: {e_brevo}")
 
