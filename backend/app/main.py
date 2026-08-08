@@ -7,15 +7,17 @@ from app.routers import auth, users, venues, events, attendance, reports, notifi
 from app.config import settings
 
 # Ensure new columns exist in pre-existing PostgreSQL database tables
-if "postgresql" in settings.DATABASE_URL.lower():
-    try:
-        with engine.connect() as conn:
+try:
+    with engine.connect() as conn:
+        if "postgresql" in settings.DATABASE_URL.lower():
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR;"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_hash VARCHAR;"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS member_category VARCHAR DEFAULT 'satsangi';"))
-            conn.commit()
-    except Exception as e:
-        pass
+        conn.execute(text("UPDATE users SET member_category = 'gunbhavi' WHERE member_category IN ('goon_bhavi', 'bhavi');"))
+        conn.execute(text("UPDATE users SET role = 'yuvak' WHERE role = 'user';"))
+        conn.commit()
+except Exception:
+    pass
 
 # Create database tables
 Base.metadata.create_all(bind=engine)

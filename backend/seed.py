@@ -76,15 +76,16 @@ def seed_database():
     )
     db.add(karyakar)
 
-    # 3. Create Regular Approved Users
+    # 3. Create Approved Yuvaks
     user1 = User(
         phone="7777777777",
         email="user1@sabha.org",
         name="Aarav Patel",
         dob="2000-01-10",
         hashed_password=hash_password("user123"),
-        role=UserRole.USER,
+        role=UserRole.YUVAK,
         status=UserStatus.APPROVED,
+        member_category="satsangi",
         current_streak=3,
         lifetime_count=15
     )
@@ -94,21 +95,23 @@ def seed_database():
         name="Riya Sharma",
         dob="1998-11-04",
         hashed_password=hash_password("user123"),
-        role=UserRole.USER,
+        role=UserRole.YUVAK,
         status=UserStatus.APPROVED,
+        member_category="gunbhavi",
         current_streak=1,
         lifetime_count=6
     )
     
-    # 4. Create Pending Approval User
+    # 4. Create Pending Approval Yuvak
     user_pending = User(
         phone="6666666666",
         email="devang@sabha.org",
         name="Devang Mehta",
         dob="2002-06-25",
         hashed_password=hash_password("user123"),
-        role=UserRole.USER,
+        role=UserRole.YUVAK,
         status=UserStatus.PENDING,
+        member_category="satsangi",
         current_streak=0,
         lifetime_count=0
     )

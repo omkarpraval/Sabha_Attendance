@@ -106,7 +106,7 @@ export default function UserManagementSection({ currentUser }) {
         const email = cols[2] || '';
         const dob = cols[3] || '';
         const category = (cols[4] || 'satsangi').toLowerCase();
-        const role = (cols[5] || 'user').toLowerCase();
+        const role = (cols[5] || 'yuvak').toLowerCase();
 
         if (name && phone) {
           parsedUsers.push({
@@ -114,8 +114,8 @@ export default function UserManagementSection({ currentUser }) {
             phone,
             email: email || null,
             dob: dob || null,
-            member_category: category === 'goon_bhavi' ? 'goon_bhavi' : 'satsangi',
-            role: role === 'karyakar' ? 'karyakar' : role === 'admin' ? 'admin' : 'user',
+            member_category: (category === 'gunbhavi' || category === 'goon_bhavi' || category === 'bhavi') ? 'gunbhavi' : 'satsangi',
+            role: role === 'karyakar' ? 'karyakar' : role === 'admin' ? 'admin' : 'yuvak',
             password: null
           });
         }
@@ -276,7 +276,7 @@ export default function UserManagementSection({ currentUser }) {
             </span>
           </h2>
           <p className="text-xs text-[#3A322C]/70 mt-0.5">
-            Search members, assign Satsangi / Goon Bhavi status, update details, or manage roles
+            Search members, assign Satsangi / Gunbhavi status, update details, or manage roles
           </p>
         </div>
 
@@ -342,7 +342,7 @@ export default function UserManagementSection({ currentUser }) {
             className="w-full px-3 py-2 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-xs text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
           >
             <option value="all">All Roles ({users.length})</option>
-            <option value="user">User / Member ({users.filter(u => u.role === 'user').length})</option>
+            <option value="yuvak">Yuvak ({users.filter(u => u.role === 'yuvak' || u.role === 'user').length})</option>
             <option value="karyakar">Karyakar ({users.filter(u => u.role === 'karyakar').length})</option>
             <option value="admin">Admin ({users.filter(u => u.role === 'admin').length})</option>
           </select>
@@ -356,7 +356,7 @@ export default function UserManagementSection({ currentUser }) {
           >
             <option value="all">All Categories</option>
             <option value="satsangi">Satsangi ({users.filter(u => u.member_category === 'satsangi').length})</option>
-            <option value="goon_bhavi">Goon Bhavi ({users.filter(u => u.member_category === 'goon_bhavi').length})</option>
+            <option value="gunbhavi">Gunbhavi ({users.filter(u => u.member_category === 'gunbhavi' || u.member_category === 'goon_bhavi').length})</option>
           </select>
         </div>
       </div>
@@ -407,9 +407,9 @@ export default function UserManagementSection({ currentUser }) {
                         )}
                       </td>
                       <td className="p-3">
-                        {u.member_category === 'goon_bhavi' ? (
+                        {u.member_category === 'gunbhavi' || u.member_category === 'goon_bhavi' ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#2D8A8A]/10 text-[#2D8A8A] border border-[#2D8A8A]/20">
-                            <Sparkles className="w-3 h-3" /> Goon Bhavi
+                            <Sparkles className="w-3 h-3" /> Gunbhavi
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#E8A33D]/10 text-[#D98A2B] border border-[#E8A33D]/30">
@@ -423,7 +423,7 @@ export default function UserManagementSection({ currentUser }) {
                           u.role === 'karyakar' ? 'bg-[#E8A33D]/10 text-[#E8A33D]' :
                           'bg-[#5B8C5B]/10 text-[#5B8C5B]'
                         }`}>
-                          {u.role}
+                          {u.role === 'user' ? 'yuvak' : u.role}
                         </span>
                       </td>
                       <td className="p-3 text-[#3A322C]/80">
@@ -614,7 +614,7 @@ export default function UserManagementSection({ currentUser }) {
                     className="w-full px-3 py-2 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-xs text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
                   >
                     <option value="satsangi">Satsangi</option>
-                    <option value="goon_bhavi">Goon Bhavi</option>
+                    <option value="gunbhavi">Gunbhavi</option>
                   </select>
                 </div>
 
@@ -625,7 +625,7 @@ export default function UserManagementSection({ currentUser }) {
                     onChange={(e) => setFormData({...formData, role: e.target.value})}
                     className="w-full px-3 py-2 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-xs text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
                   >
-                    <option value="user">User / Member</option>
+                    <option value="yuvak">Yuvak</option>
                     <option value="karyakar">Karyakar</option>
                     {currentUser?.role === 'admin' && <option value="admin">Admin</option>}
                   </select>
@@ -743,7 +743,7 @@ export default function UserManagementSection({ currentUser }) {
                     className="w-full px-3 py-2 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-xs text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
                   >
                     <option value="satsangi">Satsangi</option>
-                    <option value="goon_bhavi">Goon Bhavi</option>
+                    <option value="gunbhavi">Gunbhavi</option>
                   </select>
                 </div>
 
@@ -754,7 +754,7 @@ export default function UserManagementSection({ currentUser }) {
                     onChange={(e) => setFormData({...formData, role: e.target.value})}
                     className="w-full px-3 py-2 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-xs text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
                   >
-                    <option value="user">User / Member</option>
+                    <option value="yuvak">Yuvak</option>
                     <option value="karyakar">Karyakar</option>
                     {currentUser?.role === 'admin' && <option value="admin">Admin</option>}
                   </select>

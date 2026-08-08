@@ -79,9 +79,9 @@ def create_user_by_admin(
         name=req.name,
         dob=req.dob,
         hashed_password=hash_password(req.password),
-        role=req.role if req.role in [UserRole.USER, UserRole.KARYAKAR, UserRole.ADMIN] else UserRole.USER,
+        role=req.role if req.role in [UserRole.YUVAK, UserRole.KARYAKAR, UserRole.ADMIN, "user", "yuvak"] else UserRole.YUVAK,
         status=UserStatus.APPROVED,
-        member_category=req.member_category if req.member_category in [MemberCategory.SATSANGI, MemberCategory.GOON_BHAVI] else MemberCategory.SATSANGI,
+        member_category="gunbhavi" if req.member_category in [MemberCategory.GUNBHAVI, "goon_bhavi", "gunbhavi"] else MemberCategory.SATSANGI,
         current_streak=0,
         lifetime_count=0
     )
@@ -115,8 +115,10 @@ def bulk_import_users(
             continue
 
         raw_pwd = u_item.password.strip() if (u_item.password and u_item.password.strip()) else clean_phone
-        category = u_item.member_category if u_item.member_category in [MemberCategory.SATSANGI, MemberCategory.GOON_BHAVI] else MemberCategory.SATSANGI
-        role = u_item.role if u_item.role in [UserRole.USER, UserRole.KARYAKAR, UserRole.ADMIN] else UserRole.USER
+        raw_cat = (u_item.member_category or "").strip().lower()
+        category = "gunbhavi" if raw_cat in ["gunbhavi", "goon_bhavi", "bhavi"] else MemberCategory.SATSANGI
+        raw_role = (u_item.role or "").strip().lower()
+        role = "yuvak" if raw_role in ["yuvak", "user"] else (raw_role if raw_role in ["karyakar", "admin"] else UserRole.YUVAK)
 
         new_user = User(
             phone=clean_phone,
@@ -171,10 +173,12 @@ def update_user_by_admin(
         target.dob = req.dob
     if req.password and req.password.strip():
         target.hashed_password = hash_password(req.password)
-    if req.member_category and req.member_category in [MemberCategory.SATSANGI, MemberCategory.GOON_BHAVI]:
-        target.member_category = req.member_category
-    if req.role and req.role in [UserRole.USER, UserRole.KARYAKAR, UserRole.ADMIN]:
-        target.role = req.role
+    if req.member_category:
+        m_cat = req.member_category.strip().lower()
+        target.member_category = "gunbhavi" if m_cat in ["gunbhavi", "goon_bhavi", "bhavi"] else MemberCategory.SATSANGI
+    if req.role:
+        r_role = req.role.strip().lower()
+        target.role = "yuvak" if r_role in ["yuvak", "user"] else r_role
     if req.status and req.status in [UserStatus.APPROVED, UserStatus.PENDING, UserStatus.REJECTED]:
         target.status = req.status
 

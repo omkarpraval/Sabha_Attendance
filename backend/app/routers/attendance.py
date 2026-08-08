@@ -411,8 +411,8 @@ def get_attendance_history(
         joinedload(Attendance.marked_by_user)
     )
 
-    # Scoping: Regular users can only see their own history unless they specify their user_id
-    if current_user.role == UserRole.USER:
+    # Scoping: Yuvaks can only see their own history unless they specify their user_id
+    if current_user.role in [UserRole.YUVAK, "user", "yuvak"]:
         query = query.filter(Attendance.user_id == current_user.id)
     elif user_id:
         query = query.filter(Attendance.user_id == user_id)

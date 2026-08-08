@@ -5,12 +5,14 @@ from app.database import Base
 
 class MemberCategory:
     SATSANGI = "satsangi"
-    GOON_BHAVI = "goon_bhavi"
+    GUNBHAVI = "gunbhavi"
+    GOON_BHAVI = "gunbhavi"  # Backward-compatible alias
 
 class UserRole:
     ADMIN = "admin"
     KARYAKAR = "karyakar"
-    USER = "user"
+    YUVAK = "yuvak"
+    USER = "yuvak"  # Backward-compatible alias
 
 class UserStatus:
     PENDING = "pending"
@@ -45,7 +47,7 @@ class User(Base):
     name = Column(String, nullable=False)
     dob = Column(String, nullable=True)
     hashed_password = Column(String, nullable=False)
-    role = Column(String, default=UserRole.USER, index=True, nullable=False)
+    role = Column(String, default=UserRole.YUVAK, index=True, nullable=False)
     status = Column(String, default=UserStatus.APPROVED, index=True, nullable=False)
     member_category = Column(String, default=MemberCategory.SATSANGI, index=True, nullable=False)
     current_streak = Column(Integer, default=0)

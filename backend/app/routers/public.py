@@ -17,7 +17,7 @@ def get_public_leaderboard(db: Session = Depends(get_db)):
     2. tie-breaker: average punctuality in minutes relative to event start time (earliest first)
     """
     users = db.query(User).filter(
-        User.role == UserRole.USER,
+        User.role.in_([UserRole.YUVAK, "user", "yuvak"]),
         User.status == UserStatus.APPROVED
     ).all()
 

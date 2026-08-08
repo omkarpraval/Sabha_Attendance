@@ -1018,7 +1018,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
                 </div>
               </div>
               <div className="font-serif-accent text-2xl font-bold text-[#3A322C]">
-                {analyticsData?.kpis?.satsangi_count ?? 0} <span className="text-xs text-[#5B8C5B] font-sans font-medium">Satsangi</span> / {analyticsData?.kpis?.bhavi_count ?? 0} <span className="text-xs text-[#E8A33D] font-sans font-medium">Bhavi</span>
+                {analyticsData?.kpis?.satsangi_count ?? 0} <span className="text-xs text-[#5B8C5B] font-sans font-medium">Satsangi</span> / {(analyticsData?.kpis?.gunbhavi_count ?? analyticsData?.kpis?.bhavi_count ?? 0)} <span className="text-xs text-[#E8A33D] font-sans font-medium">Gunbhavi</span>
               </div>
               <p className="text-[11px] text-[#3A322C]/60 mt-1">Total active member breakdown</p>
             </div>
@@ -1092,7 +1092,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
                           </div>
                           <div className="text-[11px] text-[#3A322C]/70 mt-0.5 flex items-center gap-1">
                             <Phone className="w-3 h-3 text-[#8B3A3A]" />
-                            <span>{item.user.phone} • {item.user.member_category === 'goon_bhavi' ? 'Goon Bhavi' : 'Satsangi'}</span>
+                            <span>{item.user.phone} • {item.user.member_category === 'gunbhavi' || item.user.member_category === 'goon_bhavi' ? 'Gunbhavi' : 'Satsangi'}</span>
                           </div>
                         </div>
                         <div className="text-right">

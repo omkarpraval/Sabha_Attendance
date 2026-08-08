@@ -31,7 +31,7 @@ def signup(req: SignupRequest, db: Session = Depends(get_db)):
             )
 
     is_first_user = db.query(User).count() == 0
-    role = UserRole.ADMIN if is_first_user else UserRole.USER
+    role = UserRole.ADMIN if is_first_user else UserRole.YUVAK
     account_status = UserStatus.APPROVED if is_first_user else UserStatus.PENDING
 
     new_user = User(

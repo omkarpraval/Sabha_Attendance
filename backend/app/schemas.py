@@ -94,7 +94,7 @@ class UserCreateByAdmin(BaseModel):
     dob: Optional[str] = None
     password: str
     member_category: str = "satsangi"
-    role: str = "user"
+    role: str = "yuvak"
 
     @field_validator('phone')
     @classmethod
@@ -114,7 +114,7 @@ class BulkUserItem(BaseModel):
     email: Optional[str] = None
     dob: Optional[str] = None
     member_category: Optional[str] = "satsangi"
-    role: Optional[str] = "user"
+    role: Optional[str] = "yuvak"
     password: Optional[str] = None
 
 class BulkUserImportRequest(BaseModel):
