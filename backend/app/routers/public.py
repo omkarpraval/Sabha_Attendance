@@ -47,7 +47,15 @@ def get_public_leaderboard(db: Session = Depends(get_db)):
 
         # Fallback to lifetime_count if present_count is 0 but lifetime_count > 0
         final_present = present_count if present_count > 0 else (u.lifetime_count or 0)
-        turnout_pct = round((final_present / total_events * 100), 0) if total_events > 0 else 0
+
+        # Per-user total events: only count Sabhas held on or after user join date up to today
+        user_created_date = u.created_at.strftime("%Y-%m-%d") if u.created_at else ist_today
+        user_total_events = db.query(Event).filter(
+            Event.event_date <= ist_today,
+            Event.event_date >= user_created_date
+        ).count()
+        user_total_events = max(user_total_events, final_present, 1)
+        turnout_pct = min(100, round((final_present / user_total_events * 100)))
 
         avg_punctuality = sum(punctuality_minutes_list) / len(punctuality_minutes_list) if punctuality_minutes_list else 999.0
 
@@ -59,7 +67,7 @@ def get_public_leaderboard(db: Session = Depends(get_db)):
             "current_streak": u.current_streak or 0,
             "lifetime_count": u.lifetime_count or 0,
             "present_count": final_present,
-            "total_events": total_events,
+            "total_events": user_total_events,
             "turnout_pct": int(turnout_pct),
             "avg_punctuality": round(avg_punctuality, 1)
         })
