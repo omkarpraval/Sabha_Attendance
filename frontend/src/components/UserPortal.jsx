@@ -194,13 +194,17 @@ export default function UserPortal({ user, onUserUpdated }) {
     );
   }
 
+  const activeEventRecord = activeEvent ? history.find(item => item.event_id === activeEvent.id) : null;
+  const isUserPresentToday = activeEventRecord && activeEventRecord.status === 'present';
+  const isUserExcusedToday = activeEventRecord && activeEventRecord.status === 'excused';
+
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
       
-      {/* Header Greeting Banner & Streak Badge */}
-      <div className="bg-gradient-to-r from-[#8B3A3A] via-[#A8453B] to-[#6E2C2C] text-white rounded-3xl p-6 md:p-8 warm-shadow relative overflow-hidden">
+      {/* 1. Header Greeting Banner & Instant Status Chip */}
+      <div className="bg-gradient-to-r from-[#8B3A3A] via-[#A8453B] to-[#6E2C2C] text-white rounded-3xl p-5 sm:p-7 warm-shadow relative overflow-hidden">
         <div className="absolute right-0 top-0 w-64 h-64 bg-[#E8A33D]/10 rounded-full blur-2xl pointer-events-none"></div>
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5 relative z-10">
           <div>
             <div className="flex items-center gap-2 text-[#E8A33D] text-xs font-bold uppercase tracking-wider mb-1">
               <Sparkles className="w-4 h-4" />
@@ -209,16 +213,42 @@ export default function UserPortal({ user, onUserUpdated }) {
             <h2 className="font-serif-accent text-2xl md:text-3xl font-bold">
               {user.name}
             </h2>
-            <p className="text-white/80 text-xs md:text-sm mt-1">
+            <p className="text-white/80 text-xs md:text-sm mt-0.5">
               Welcome to your personal sabha attendance dashboard
             </p>
+
+            {/* 🟢 Instant Top Hero Header Status Chip */}
+            {activeEvent && (
+              <div className="mt-3">
+                {activeEventRecord ? (
+                  <div className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-md border animate-in fade-in duration-200 ${
+                    isUserPresentToday
+                      ? 'bg-[#15803D] text-white border-white/20'
+                      : isUserExcusedToday
+                      ? 'bg-[#D9B166] text-white border-white/20'
+                      : 'bg-[#C1554A] text-white border-white/20'
+                  }`}>
+                    <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
+                    <span>STATUS: {activeEventRecord.status.toUpperCase()} ({activeEvent.title})</span>
+                  </div>
+                ) : isTodayEvent && activeEvent.status === 'open' ? (
+                  <button
+                    onClick={() => setShowScanner(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold bg-[#E8A33D] hover:bg-[#D98A2B] text-white shadow-lg border border-white/30 animate-pulse cursor-pointer transition-transform active:scale-95"
+                  >
+                    <QrCode className="w-4 h-4 text-white shrink-0" />
+                    <span>SABHA IS LIVE! TAP TO SCAN QR</span>
+                  </button>
+                ) : null}
+              </div>
+            )}
           </div>
 
           {/* Diya Flame Streak Counter Widget */}
-          <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/15">
+          <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/15 shrink-0 w-full sm:w-auto justify-between sm:justify-start">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-[#E8A33D] flex items-center justify-center text-white shadow-md">
-                <Flame className="w-7 h-7 animate-diya-flame" />
+              <div className="w-11 h-11 rounded-xl bg-[#E8A33D] flex items-center justify-center text-white shadow-md shrink-0">
+                <Flame className="w-6 h-6 animate-diya-flame" />
               </div>
               <div>
                 <div className="font-serif-accent text-2xl font-bold leading-none text-[#E8A33D]">
@@ -240,8 +270,92 @@ export default function UserPortal({ user, onUserUpdated }) {
         </div>
       </div>
 
-      {/* Yuvak Profile & Personal Details Card */}
-      <div className="bg-white rounded-2xl p-5 warm-shadow border border-[#EFE7DA] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      {/* 2. TOP PRIORITY: Today's Live Sabha Attendance & Scan Card */}
+      <div className="bg-white rounded-2xl p-5 sm:p-6 warm-shadow border-2 border-[#8B3A3A]/20 text-center space-y-4">
+        <div>
+          <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mb-2 ${
+            isTodayEvent ? 'bg-[#5B8C5B]/15 text-[#5B8C5B]' : 'bg-[#E8A33D]/15 text-[#E8A33D]'
+          }`}>
+            {isTodayEvent ? "Today's Live Sabha Attendance" : "Next Upcoming Sabha Event"}
+          </span>
+
+          <h3 className="font-serif-accent text-2xl font-bold text-[#8B3A3A]">
+            {activeEvent ? activeEvent.title : 'Saturday Sabha'}
+          </h3>
+
+          {activeEvent && (
+            <p className="text-xs text-[#3A322C]/70 mt-1 flex flex-wrap items-center justify-center gap-3">
+              <span className="flex items-center gap-1"><CalendarIcon className="w-3.5 h-3.5 text-[#8B3A3A]" /> {activeEvent.event_date}</span>
+              <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-[#8B3A3A]" /> {activeEvent.start_time} - {activeEvent.end_time} IST</span>
+              <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-[#8B3A3A]" /> {activeEvent.venue_name || 'Central Sabha Mandir'}</span>
+            </p>
+          )}
+        </div>
+
+        {/* Primary Scan Button or Marked Attendance Status Card */}
+        {(() => {
+          if (activeEventRecord) {
+            const isPresent = activeEventRecord.status === 'present';
+            const isExcused = activeEventRecord.status === 'excused';
+            return (
+              <div className={`my-3 p-5 rounded-2xl border text-center space-y-2 animate-in fade-in zoom-in-95 ${
+                isPresent ? 'bg-[#5B8C5B]/10 border-[#5B8C5B]/30 text-[#5B8C5B]' :
+                isExcused ? 'bg-[#D9B166]/10 border-[#D9B166]/30 text-[#D9B166]' : 'bg-[#C1554A]/10 border-[#C1554A]/30 text-[#C1554A]'
+              }`}>
+                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full mb-1 ${
+                  isPresent ? 'bg-[#5B8C5B]/20' : isExcused ? 'bg-[#D9B166]/20' : 'bg-[#C1554A]/20'
+                }`}>
+                  <CheckCircle2 className="w-7 h-7" />
+                </div>
+                <h4 className="font-serif-accent text-xl font-bold">
+                  Attendance Status: {activeEventRecord.status.toUpperCase()}
+                </h4>
+                <p className="text-xs text-[#3A322C]/80">
+                  Logged on {activeEventRecord.event_date} {activeEventRecord.timestamp_utc ? `at ${formatISTTime(activeEventRecord.timestamp_utc)}` : ''} • Marked by {activeEventRecord.marked_by_name || 'Self QR'}
+                </p>
+                <div className="pt-2">
+                  <span className={`inline-block px-3.5 py-1 rounded-full text-xs font-semibold text-white shadow-2xs ${
+                    isPresent ? 'bg-[#5B8C5B]' : isExcused ? 'bg-[#D9B166]' : 'bg-[#C1554A]'
+                  }`}>
+                    ✓ Attendance Verified for {activeEvent?.title || 'this Sabha'}
+                  </span>
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div className="py-3 flex justify-center">
+              <button
+                onClick={() => setShowScanner(true)}
+                className="w-40 h-40 sm:w-48 sm:h-48 rounded-full bg-gradient-to-tr from-[#E8A33D] to-[#F0A93A] text-white font-bold flex flex-col items-center justify-center gap-2 shadow-xl hover:scale-105 transition-all duration-300 animate-scan-ripple cursor-pointer"
+              >
+                <QrCode className="w-12 h-12 sm:w-16 sm:h-16" />
+                <span className="text-sm sm:text-base tracking-wide font-semibold">Tap to Scan QR</span>
+                <span className="text-[10px] text-white/80 font-normal bg-black/10 px-2.5 py-0.5 rounded-full">
+                  GPS Geofenced Radius
+                </span>
+              </button>
+            </div>
+          );
+        })()}
+
+        {/* Error Feedback */}
+        {scanError && (
+          <div className="p-4 rounded-2xl bg-[#C1554A]/10 border border-[#C1554A]/30 text-[#C1554A] animate-in fade-in zoom-in-95 duration-200 text-left">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold text-sm block">Attendance Validation Failed</span>
+                <span className="text-xs text-[#3A322C]/80 mt-0.5 block">{scanError}</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 3. Compact Yuvak Profile Card */}
+      <div className="bg-white rounded-2xl p-4 sm:p-5 warm-shadow border border-[#EFE7DA] flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
         <div className="space-y-1">
           <div className="text-xs font-semibold text-[#8B3A3A] uppercase tracking-wider">Member Profile</div>
           <div className="flex flex-wrap items-center gap-3 text-xs text-[#3A322C]">
@@ -268,15 +382,15 @@ export default function UserPortal({ user, onUserUpdated }) {
         </div>
 
         {(user.is_working === 'Yes' || user.is_studying === 'Yes' || user.occupation || user.study_details) && (
-          <div className="flex flex-wrap items-center gap-2 text-xs bg-[#FDFBF7] p-2.5 rounded-xl border border-[#EFE7DA]">
+          <div className="flex flex-wrap items-center gap-2 text-xs bg-[#FDFBF7] p-2 rounded-xl border border-[#EFE7DA]">
             {user.is_working === 'Yes' && (
-              <span className="bg-[#5B8C5B]/10 text-[#5B8C5B] px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1.5">
+              <span className="bg-[#5B8C5B]/10 text-[#5B8C5B] px-2 py-0.5 rounded-lg font-semibold flex items-center gap-1">
                 <Briefcase className="w-3.5 h-3.5 text-[#5B8C5B]" />
                 <span>{user.occupation || 'Working'} {user.company_name ? `@ ${user.company_name}` : ''}</span>
               </span>
             )}
             {user.is_studying === 'Yes' && (
-              <span className="bg-[#E8A33D]/10 text-[#D98A2B] px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1.5">
+              <span className="bg-[#E8A33D]/10 text-[#D98A2B] px-2 py-0.5 rounded-lg font-semibold flex items-center gap-1">
                 <GraduationCap className="w-3.5 h-3.5 text-[#E8A33D]" />
                 <span>{user.education_stream || 'Studying'} {user.study_details ? `(${user.study_details})` : ''}</span>
               </span>
@@ -285,104 +399,33 @@ export default function UserPortal({ user, onUserUpdated }) {
         )}
       </div>
 
-      {/* Main Action Section: Scan to Mark Attendance */}
-      <div className="bg-white rounded-2xl p-6 warm-shadow border border-[#EFE7DA] text-center space-y-4">
-        <div>
-          <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mb-2 ${
-            isTodayEvent ? 'bg-[#5B8C5B]/15 text-[#5B8C5B]' : 'bg-[#E8A33D]/15 text-[#E8A33D]'
-          }`}>
-            {isTodayEvent ? "Today's Live Sabha Attendance" : "Next Upcoming Sabha Event"}
-          </span>
-
-          <h3 className="font-serif-accent text-2xl font-bold text-[#8B3A3A]">
-            {activeEvent ? activeEvent.title : 'Saturday Sabha'}
-          </h3>
-
-          {activeEvent && (
-            <p className="text-xs text-[#3A322C]/70 mt-1 flex flex-wrap items-center justify-center gap-3">
-              <span className="flex items-center gap-1"><CalendarIcon className="w-3.5 h-3.5" /> {activeEvent.event_date}</span>
-              <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {activeEvent.start_time} - {activeEvent.end_time} IST</span>
-              <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {activeEvent.venue_name || 'Central Sabha Mandir'}</span>
-            </p>
-          )}
+      {/* 4. Full-Screen Verification Celebration Overlay on Scan Success */}
+      {scanResult && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99999] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full text-center space-y-4 shadow-2xl border-2 border-[#5B8C5B]">
+            <div className="w-16 h-16 rounded-full bg-[#5B8C5B]/20 text-[#5B8C5B] flex items-center justify-center mx-auto shadow-inner">
+              <CheckCircle2 className="w-10 h-10 animate-bounce" />
+            </div>
+            <div>
+              <h3 className="font-serif-accent text-xl font-bold text-[#8B3A3A]">
+                Jai Swaminarayan!
+              </h3>
+              <h4 className="font-bold text-base text-[#5B8C5B] mt-1">
+                Attendance Marked PRESENT
+              </h4>
+              <p className="text-xs text-[#3A322C]/80 mt-2">
+                Verified for <span className="font-semibold text-[#8B3A3A]">{activeEvent?.title || 'Sabha'}</span> at {formatISTTime(scanResult.timestamp_utc || new Date().toISOString())}.
+              </p>
+            </div>
+            <button
+              onClick={() => setScanResult(null)}
+              className="w-full py-2.5 bg-[#5B8C5B] hover:bg-[#4A734A] text-white font-bold text-xs rounded-xl shadow-md cursor-pointer transition-colors"
+            >
+              Done & Continue
+            </button>
+          </div>
         </div>
-
-        {/* Primary Scan Button or Marked Attendance Status Card */}
-        {(() => {
-          const activeEventRecord = activeEvent ? history.find(item => item.event_id === activeEvent.id) : null;
-          if (activeEventRecord) {
-            const isPresent = activeEventRecord.status === 'present';
-            const isExcused = activeEventRecord.status === 'excused';
-            return (
-              <div className={`my-4 p-6 rounded-2xl border text-center space-y-2 animate-in fade-in zoom-in-95 ${
-                isPresent ? 'bg-[#5B8C5B]/10 border-[#5B8C5B]/30 text-[#5B8C5B]' :
-                isExcused ? 'bg-[#D9B166]/10 border-[#D9B166]/30 text-[#D9B166]' : 'bg-[#C1554A]/10 border-[#C1554A]/30 text-[#C1554A]'
-              }`}>
-                <div className={`inline-flex items-center justify-center w-14 h-14 rounded-full mb-1 ${
-                  isPresent ? 'bg-[#5B8C5B]/20' : isExcused ? 'bg-[#D9B166]/20' : 'bg-[#C1554A]/20'
-                }`}>
-                  <CheckCircle2 className="w-8 h-8" />
-                </div>
-                <h4 className="font-serif-accent text-xl font-bold">
-                  Attendance Status: {activeEventRecord.status.toUpperCase()}
-                </h4>
-                <p className="text-xs text-[#3A322C]/80">
-                  Logged on {activeEventRecord.event_date} {activeEventRecord.timestamp_utc ? `at ${formatISTTime(activeEventRecord.timestamp_utc)}` : ''} • Marked by {activeEventRecord.marked_by_name || 'Self QR'}
-                </p>
-                <div className="pt-2">
-                  <span className={`inline-block px-3.5 py-1 rounded-full text-xs font-semibold text-white shadow-2xs ${
-                    isPresent ? 'bg-[#5B8C5B]' : isExcused ? 'bg-[#D9B166]' : 'bg-[#C1554A]'
-                  }`}>
-                    ✓ Attendance Verified for {activeEvent?.title || 'this Sabha'}
-                  </span>
-                </div>
-              </div>
-            );
-          }
-
-          return (
-            <div className="py-4 flex justify-center">
-              <button
-                onClick={() => setShowScanner(true)}
-                className="w-44 h-44 sm:w-48 sm:h-48 rounded-full bg-gradient-to-tr from-[#E8A33D] to-[#F0A93A] text-white font-bold flex flex-col items-center justify-center gap-2 shadow-xl hover:scale-105 transition-all duration-300 animate-scan-ripple cursor-pointer"
-              >
-                <QrCode className="w-14 h-14 sm:w-16 sm:h-16" />
-                <span className="text-sm sm:text-base tracking-wide font-semibold">Tap to Scan QR</span>
-                <span className="text-[10px] text-white/80 font-normal bg-black/10 px-2.5 py-0.5 rounded-full">
-                  GPS Geofenced Radius
-                </span>
-              </button>
-            </div>
-          );
-        })()}
-
-        {/* Success Scan Feedback Card */}
-        {scanResult && (
-          <div className="p-4 rounded-2xl bg-[#5B8C5B]/10 border border-[#5B8C5B]/30 text-[#5B8C5B] animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-center gap-2 font-bold text-base mb-1">
-              <CheckCircle2 className="w-6 h-6 text-[#5B8C5B]" />
-              <span>Marked Present Successfully!</span>
-            </div>
-            <p className="text-xs text-[#3A322C]/80">
-              Attendance recorded at {formatISTTime(scanResult.timestamp_utc)}.
-              {scanResult.distance_meters !== null && ` Verified ${scanResult.distance_meters}m from venue center.`}
-            </p>
-          </div>
-        )}
-
-        {/* Error Feedback */}
-        {scanError && (
-          <div className="p-4 rounded-2xl bg-[#C1554A]/10 border border-[#C1554A]/30 text-[#C1554A] animate-in fade-in zoom-in-95 duration-200 text-left">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-              <div>
-                <span className="font-bold text-sm block">Attendance Validation Failed</span>
-                <span className="text-xs text-[#3A322C]/80 mt-0.5 block">{scanError}</span>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* PERSONAL ATTENDANCE RECORD (GRAPH / PERCENTAGE & FILTERS) */}
       {(() => {
