@@ -613,14 +613,16 @@ export default function UserManagementSection({ currentUser }) {
             </div>
           </div>
         </div>
-      )}      {/* Modal 1: ADD NEW MEMBER */}
+      )}
+
+      {/* Modal 1: ADD NEW MEMBER */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-[#3A322C]/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-md w-full p-4 sm:p-6 warm-shadow border border-[#EFE7DA] animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-xl w-full p-4 sm:p-6 warm-shadow border border-[#EFE7DA] animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4 pb-2 border-b border-[#EFE7DA]">
               <h3 className="font-serif-accent text-lg font-bold text-[#8B3A3A] flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-[#E8A33D]" />
-                Add New Member
+                <UserPlus className="w-5 h-5 text-[#8B3A3A]" />
+                Add New Member Account
               </h3>
               <button onClick={() => setIsAddModalOpen(false)} className="text-[#3A322C]/60 hover:text-[#8B3A3A] cursor-pointer">
                 <X className="w-5 h-5" />
@@ -673,6 +675,103 @@ export default function UserManagementSection({ currentUser }) {
                     onChange={(e) => setFormData({...formData, dob: e.target.value})}
                     className="w-full px-3 py-2 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-xs text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
                   />
+                </div>
+              </div>
+
+              {/* Extended Profile Details (Area, Work, Education) */}
+              <div className="p-3 bg-[#FDFBF7] rounded-xl border border-[#EFE7DA] space-y-3">
+                <div className="font-semibold text-xs text-[#8B3A3A] flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-[#8B3A3A]" />
+                  <span>Area, Work & Education Details</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-[#3A322C] mb-1">Residential Area</label>
+                    <input
+                      type="text"
+                      value={formData.area || ''}
+                      onChange={(e) => setFormData({...formData, area: e.target.value})}
+                      placeholder="e.g. Ashok Nagar, Hanuman Nagar"
+                      className="w-full px-3 py-2 rounded-xl border border-[#EFE7DA] bg-white text-xs text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block font-semibold text-[#3A322C] mb-1">Working?</label>
+                      <select
+                        value={formData.is_working || ''}
+                        onChange={(e) => setFormData({...formData, is_working: e.target.value})}
+                        className="w-full px-2.5 py-2 rounded-xl border border-[#EFE7DA] bg-white text-xs text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
+                      >
+                        <option value="">-- Select --</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-[#3A322C] mb-1">Studying?</label>
+                      <select
+                        value={formData.is_studying || ''}
+                        onChange={(e) => setFormData({...formData, is_studying: e.target.value})}
+                        className="w-full px-2.5 py-2 rounded-xl border border-[#EFE7DA] bg-white text-xs text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
+                      >
+                        <option value="">-- Select --</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-[#3A322C] mb-1">Occupation (if working)</label>
+                    <input
+                      type="text"
+                      value={formData.occupation || ''}
+                      onChange={(e) => setFormData({...formData, occupation: e.target.value})}
+                      placeholder="e.g. Information Technology"
+                      className="w-full px-3 py-2 rounded-xl border border-[#EFE7DA] bg-white text-xs text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-[#3A322C] mb-1">Company Name</label>
+                    <input
+                      type="text"
+                      value={formData.company_name || ''}
+                      onChange={(e) => setFormData({...formData, company_name: e.target.value})}
+                      placeholder="e.g. TCS, Reliance"
+                      className="w-full px-3 py-2 rounded-xl border border-[#EFE7DA] bg-white text-xs text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-[#3A322C] mb-1">Stream of Education</label>
+                    <input
+                      type="text"
+                      value={formData.education_stream || ''}
+                      onChange={(e) => setFormData({...formData, education_stream: e.target.value})}
+                      placeholder="e.g. Science, Commerce, Arts"
+                      className="w-full px-3 py-2 rounded-xl border border-[#EFE7DA] bg-white text-xs text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-[#3A322C] mb-1">Study Details / Degree</label>
+                    <input
+                      type="text"
+                      value={formData.study_details || ''}
+                      onChange={(e) => setFormData({...formData, study_details: e.target.value})}
+                      placeholder="e.g. MCA, BMS, 12th Pass"
+                      className="w-full px-3 py-2 rounded-xl border border-[#EFE7DA] bg-white text-xs text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -748,7 +847,7 @@ export default function UserManagementSection({ currentUser }) {
       {/* Modal 2: EDIT MEMBER DETAILS */}
       {isEditModalOpen && editingUser && (
         <div className="fixed inset-0 z-50 bg-[#3A322C]/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-md w-full p-4 sm:p-6 warm-shadow border border-[#EFE7DA] animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-xl w-full p-4 sm:p-6 warm-shadow border border-[#EFE7DA] animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4 pb-2 border-b border-[#EFE7DA]">
               <h3 className="font-serif-accent text-lg font-bold text-[#8B3A3A] flex items-center gap-2">
                 <Pencil className="w-5 h-5 text-[#8B3A3A]" />
@@ -802,6 +901,103 @@ export default function UserManagementSection({ currentUser }) {
                     onChange={(e) => setFormData({...formData, dob: e.target.value})}
                     className="w-full px-3 py-2 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-xs text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
                   />
+                </div>
+              </div>
+
+              {/* Extended Profile Details (Area, Work, Education) */}
+              <div className="p-3 bg-[#FDFBF7] rounded-xl border border-[#EFE7DA] space-y-3">
+                <div className="font-semibold text-xs text-[#8B3A3A] flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-[#8B3A3A]" />
+                  <span>Area, Work & Education Details</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-[#3A322C] mb-1">Residential Area</label>
+                    <input
+                      type="text"
+                      value={formData.area || ''}
+                      onChange={(e) => setFormData({...formData, area: e.target.value})}
+                      placeholder="e.g. Ashok Nagar, Hanuman Nagar"
+                      className="w-full px-3 py-2 rounded-xl border border-[#EFE7DA] bg-white text-xs text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block font-semibold text-[#3A322C] mb-1">Working?</label>
+                      <select
+                        value={formData.is_working || ''}
+                        onChange={(e) => setFormData({...formData, is_working: e.target.value})}
+                        className="w-full px-2.5 py-2 rounded-xl border border-[#EFE7DA] bg-white text-xs text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
+                      >
+                        <option value="">-- Select --</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-[#3A322C] mb-1">Studying?</label>
+                      <select
+                        value={formData.is_studying || ''}
+                        onChange={(e) => setFormData({...formData, is_studying: e.target.value})}
+                        className="w-full px-2.5 py-2 rounded-xl border border-[#EFE7DA] bg-white text-xs text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
+                      >
+                        <option value="">-- Select --</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-[#3A322C] mb-1">Occupation (if working)</label>
+                    <input
+                      type="text"
+                      value={formData.occupation || ''}
+                      onChange={(e) => setFormData({...formData, occupation: e.target.value})}
+                      placeholder="e.g. Information Technology"
+                      className="w-full px-3 py-2 rounded-xl border border-[#EFE7DA] bg-white text-xs text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-[#3A322C] mb-1">Company Name</label>
+                    <input
+                      type="text"
+                      value={formData.company_name || ''}
+                      onChange={(e) => setFormData({...formData, company_name: e.target.value})}
+                      placeholder="e.g. TCS, Reliance"
+                      className="w-full px-3 py-2 rounded-xl border border-[#EFE7DA] bg-white text-xs text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-[#3A322C] mb-1">Stream of Education</label>
+                    <input
+                      type="text"
+                      value={formData.education_stream || ''}
+                      onChange={(e) => setFormData({...formData, education_stream: e.target.value})}
+                      placeholder="e.g. Science, Commerce, Arts"
+                      className="w-full px-3 py-2 rounded-xl border border-[#EFE7DA] bg-white text-xs text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-[#3A322C] mb-1">Study Details / Degree</label>
+                    <input
+                      type="text"
+                      value={formData.study_details || ''}
+                      onChange={(e) => setFormData({...formData, study_details: e.target.value})}
+                      placeholder="e.g. MCA, BMS, 12th Pass"
+                      className="w-full px-3 py-2 rounded-xl border border-[#EFE7DA] bg-white text-xs text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
+                    />
+                  </div>
                 </div>
               </div>
 
