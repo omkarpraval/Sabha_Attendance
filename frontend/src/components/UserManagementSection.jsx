@@ -875,101 +875,148 @@ export default function UserManagementSection({ currentUser }) {
 
       {/* Modal 3: BULK IMPORT MEMBERS VIA CSV/EXCEL */}
       {isBulkModalOpen && (
-        <div className="fixed inset-0 z-50 bg-[#3A322C]/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 warm-shadow border border-[#EFE7DA] animate-in fade-in zoom-in-95 duration-200 space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-[#EFE7DA]">
-              <h3 className="font-serif-accent text-lg font-bold text-[#8B3A3A] flex items-center gap-2">
+        <div className="fixed inset-0 z-50 bg-[#3A322C]/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[92vh] p-4 sm:p-6 warm-shadow border border-[#EFE7DA] animate-in fade-in zoom-in-95 duration-200 flex flex-col my-auto">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-[#EFE7DA] shrink-0">
+              <h3 className="font-serif-accent text-base sm:text-lg font-bold text-[#8B3A3A] flex items-center gap-2">
                 <UploadCloud className="w-5 h-5 text-[#8B3A3A]" />
-                Bulk Import Members via CSV
+                <span>Bulk Import Members via CSV / Excel</span>
               </h3>
-              <button onClick={() => setIsBulkModalOpen(false)} className="text-[#3A322C]/60 hover:text-[#8B3A3A] cursor-pointer">
+              <button onClick={() => setIsBulkModalOpen(false)} className="text-[#3A322C]/60 hover:text-[#8B3A3A] p-1 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Step 1: Download Template */}
-            <div className="p-3 bg-[#FDFBF7] rounded-xl border border-[#EFE7DA] flex items-center justify-between">
-              <div>
-                <div className="font-semibold text-xs text-[#3A322C]">Step 1: Download Sample CSV Template</div>
-                <div className="text-[11px] text-[#3A322C]/60">Pre-formatted: Full Name, Mobile Number, Birthdate, Area, Working?, Studying?, Occupation, Company, Stream, Details</div>
-              </div>
-              <button
-                type="button"
-                onClick={handleDownloadSampleCSV}
-                className="px-3 py-1.5 rounded-lg bg-white border border-[#EFE7DA] hover:bg-[#EFE7DA] text-xs font-semibold text-[#8B3A3A] flex items-center gap-1.5 cursor-pointer shrink-0"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Download CSV</span>
-              </button>
-            </div>
-
-            {/* Step 2: Upload CSV */}
-            <div>
-              <label className="block text-xs font-semibold text-[#3A322C] mb-1">Step 2: Choose CSV File to Upload</label>
-              <input
-                type="file"
-                accept=".csv"
-                onChange={handleFileSelected}
-                className="w-full text-xs text-[#3A322C] file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#8B3A3A]/10 file:text-[#8B3A3A] hover:file:bg-[#8B3A3A]/20 cursor-pointer"
-              />
-            </div>
-
-            {/* Password Callout Banner */}
-            <div className="p-3 bg-[#E8A33D]/10 rounded-xl border border-[#E8A33D]/30 text-xs text-[#3A322C]">
-              <div className="font-bold text-[#D98A2B] mb-0.5 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-[#D98A2B]" />
-                <span>Default Initial Password Rule:</span>
-              </div>
-              Any member imported without a password will have their <strong>Phone Number</strong> set as their initial password. You can inform members: <em>"Log in using your registered Phone Number as your password!"</em>
-            </div>
-
-            {/* Live Preview Table */}
-            {bulkPreviewData.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between text-xs font-semibold text-[#3A322C] mb-1.5">
-                  <span>File Preview ({bulkPreviewData.length} records detected)</span>
-                  <span className="text-[11px] text-[#5B8C5B] font-bold">Showing all {bulkPreviewData.length} records</span>
+            {/* Scrollable Modal Content */}
+            <div className="flex-1 overflow-y-auto py-3 space-y-4 pr-1">
+              {/* Step 1 & Step 2 Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Step 1: Download Template */}
+                <div className="p-3 bg-[#FDFBF7] rounded-xl border border-[#EFE7DA] flex flex-col justify-between space-y-2">
+                  <div>
+                    <div className="font-semibold text-xs text-[#3A322C]">Step 1: Download Sample CSV Template</div>
+                    <div className="text-[11px] text-[#3A322C]/60 leading-snug mt-0.5">
+                      Pre-formatted columns: Full Name, Mobile Number, Birthdate, Area, Working?, Studying?, Occupation, Company, Stream, Details
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleDownloadSampleCSV}
+                    className="w-full sm:w-auto self-start px-3 py-1.5 rounded-lg bg-white border border-[#EFE7DA] hover:bg-[#EFE7DA] text-xs font-semibold text-[#8B3A3A] flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs transition-all"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download CSV Template</span>
+                  </button>
                 </div>
-                <div className="max-h-64 overflow-y-auto border border-[#EFE7DA] rounded-xl text-[11px]">
-                  <table className="w-full text-left">
-                    <thead className="bg-[#FDFBF7] text-[#8B3A3A] font-semibold sticky top-0 border-b border-[#EFE7DA] z-10">
-                      <tr>
-                        <th className="p-2">#</th>
-                        <th className="p-2">Name</th>
-                        <th className="p-2">Phone</th>
-                        <th className="p-2">Birthdate</th>
-                        <th className="p-2">Area</th>
-                        <th className="p-2">Work / Study Details</th>
-                        <th className="p-2">Category</th>
-                        <th className="p-2">Role</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#EFE7DA]">
-                      {bulkPreviewData.map((row, idx) => (
-                        <tr key={idx} className="hover:bg-[#FDFBF7]">
-                          <td className="p-2 text-[#3A322C]/50 font-mono text-[10px]">{idx + 1}</td>
-                          <td className="p-2 font-medium">{row.name}</td>
-                          <td className="p-2 font-mono">{row.phone}</td>
-                          <td className="p-2 text-[#3A322C]/70">{row.dob || '-'}</td>
-                          <td className="p-2 text-[#8B3A3A] font-medium">{row.area || '-'}</td>
-                          <td className="p-2 text-[#3A322C]/80">
-                            {row.is_working === 'Yes' ? (row.occupation || 'Working') : (row.education_stream || row.study_details || '-')}
-                          </td>
-                          <td className="p-2 capitalize">{row.member_category}</td>
-                          <td className="p-2 uppercase font-semibold text-[10px]">{row.role}</td>
+
+                {/* Step 2: Upload CSV */}
+                <div className="p-3 bg-[#FDFBF7] rounded-xl border border-[#EFE7DA] flex flex-col justify-between space-y-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-[#3A322C]">Step 2: Choose CSV File to Upload</label>
+                    <div className="text-[11px] text-[#3A322C]/60 leading-snug mt-0.5">
+                      Supports Google Form response exports (.csv) and standard member templates.
+                    </div>
+                  </div>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileSelected}
+                    className="w-full text-xs text-[#3A322C] file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#8B3A3A]/10 file:text-[#8B3A3A] hover:file:bg-[#8B3A3A]/20 cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              {/* Default Password Callout Banner */}
+              <div className="p-3 bg-[#E8A33D]/10 rounded-xl border border-[#E8A33D]/30 text-xs text-[#3A322C]">
+                <div className="font-bold text-[#D98A2B] mb-0.5 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-[#D98A2B]" />
+                  <span>Default Initial Password Rule:</span>
+                </div>
+                Any member imported without a password will have their <strong>Phone Number</strong> set as their initial password. You can inform members: <em>"Log in using your registered Phone Number as your password!"</em>
+              </div>
+
+              {/* Live Preview Section */}
+              {bulkPreviewData.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs font-semibold text-[#3A322C]">
+                    <span>File Preview ({bulkPreviewData.length} records detected)</span>
+                    <span className="text-[11px] text-[#5B8C5B] font-bold">Showing all {bulkPreviewData.length} records</span>
+                  </div>
+
+                  {/* Desktop Table View (sm:block) */}
+                  <div className="hidden sm:block max-h-72 overflow-y-auto border border-[#EFE7DA] rounded-xl text-xs">
+                    <table className="w-full text-left">
+                      <thead className="bg-[#FDFBF7] text-[#8B3A3A] font-semibold sticky top-0 border-b border-[#EFE7DA] z-10">
+                        <tr>
+                          <th className="p-2.5">#</th>
+                          <th className="p-2.5">Full Name</th>
+                          <th className="p-2.5">Phone</th>
+                          <th className="p-2.5">Birthdate</th>
+                          <th className="p-2.5">Area</th>
+                          <th className="p-2.5">Work / Study Details</th>
+                          <th className="p-2.5">Category</th>
+                          <th className="p-2.5">Role</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
+                      </thead>
+                      <tbody className="divide-y divide-[#EFE7DA]">
+                        {bulkPreviewData.map((row, idx) => (
+                          <tr key={idx} className="hover:bg-[#FDFBF7]">
+                            <td className="p-2.5 text-[#3A322C]/50 font-mono text-[11px]">{idx + 1}</td>
+                            <td className="p-2.5 font-semibold text-[#3A322C]">{row.name}</td>
+                            <td className="p-2.5 font-mono">{row.phone}</td>
+                            <td className="p-2.5 text-[#3A322C]/70">{row.dob || '-'}</td>
+                            <td className="p-2.5 text-[#8B3A3A] font-medium">{row.area || '-'}</td>
+                            <td className="p-2.5 text-[#3A322C]/80 max-w-xs truncate">
+                              {row.is_working === 'Yes' ? (row.occupation || 'Working') : (row.education_stream || row.study_details || '-')}
+                            </td>
+                            <td className="p-2.5 capitalize font-medium">{row.member_category}</td>
+                            <td className="p-2.5 uppercase font-bold text-[10px] text-[#5B8C5B]">{row.role}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
 
-            <div className="pt-2 flex gap-2">
+                  {/* Mobile Card List View (< 640px) */}
+                  <div className="block sm:hidden max-h-72 overflow-y-auto space-y-2 pr-1">
+                    {bulkPreviewData.map((row, idx) => (
+                      <div key={idx} className="p-3 bg-[#FDFBF7] rounded-xl border border-[#EFE7DA] text-xs space-y-1.5">
+                        <div className="flex items-center justify-between font-bold text-[#3A322C]">
+                          <span className="truncate">{idx + 1}. {row.name}</span>
+                          {row.area && <span className="text-[11px] text-[#8B3A3A] shrink-0 font-medium ml-2">📍 {row.area}</span>}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#3A322C]/70 font-mono">
+                          <span>📱 {row.phone}</span>
+                          {row.dob && <span>🎂 {row.dob}</span>}
+                        </div>
+                        {(row.occupation || row.education_stream || row.study_details) && (
+                          <div className="text-[11px] text-[#5B8C5B] font-medium bg-white px-2 py-1 rounded-lg border border-[#EFE7DA]">
+                            {row.is_working === 'Yes' ? (
+                              <span>💼 {row.occupation} {row.company_name ? `@ ${row.company_name}` : ''}</span>
+                            ) : (
+                              <span>🎓 {row.education_stream || row.study_details}</span>
+                            )}
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between pt-1 text-[10px]">
+                          <span className="capitalize font-semibold text-[#3A322C]/70">Category: {row.member_category}</span>
+                          <span className="uppercase font-bold text-[#5B8C5B]">Role: {row.role}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Sticky Footer Actions */}
+            <div className="pt-3 border-t border-[#EFE7DA] flex gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => setIsBulkModalOpen(false)}
-                className="flex-1 py-2.5 rounded-xl border border-[#EFE7DA] text-[#3A322C] hover:bg-[#FDFBF7] font-semibold text-xs cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl border border-[#EFE7DA] text-[#3A322C] hover:bg-[#FDFBF7] font-semibold text-xs cursor-pointer active:scale-98"
               >
                 Cancel
               </button>
@@ -977,7 +1024,7 @@ export default function UserManagementSection({ currentUser }) {
                 type="button"
                 disabled={bulkUploading || bulkPreviewData.length === 0}
                 onClick={handleBulkSubmit}
-                className="flex-1 py-2.5 rounded-xl bg-[#5B8C5B] hover:bg-[#4A734A] text-white font-semibold text-xs shadow-md transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-1.5"
+                className="flex-1 py-2.5 rounded-xl bg-[#5B8C5B] hover:bg-[#4A734A] text-white font-semibold text-xs shadow-md transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-1.5 active:scale-98"
               >
                 {bulkUploading ? 'Importing Members...' : `Import ${bulkPreviewData.length} Members`}
               </button>
