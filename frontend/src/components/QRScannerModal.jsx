@@ -138,6 +138,27 @@ export default function QRScannerModal({ onClose, onScanSuccess, activeEvent }) 
     }
   };
 
+  const formatCameraLabel = (camera, index, allCameras) => {
+    const label = (camera.label || '').toLowerCase();
+    
+    const isFront = label.includes('front') || label.includes('user') || label.includes('selfie') || label.includes('facing front');
+    const isBack = label.includes('back') || label.includes('environment') || label.includes('rear') || label.includes('facing back');
+
+    if (isFront) {
+      const frontCameras = allCameras.filter(c => (c.label || '').toLowerCase().match(/front|user|selfie|facing front/));
+      const frontIndex = frontCameras.findIndex(c => c.id === camera.id);
+      return frontCameras.length > 1 ? `📷 Front Camera ${frontIndex + 1}` : '📷 Front Camera';
+    }
+
+    if (isBack) {
+      const backCameras = allCameras.filter(c => (c.label || '').toLowerCase().match(/back|environment|rear|facing back/));
+      const backIndex = backCameras.findIndex(c => c.id === camera.id);
+      return backCameras.length > 1 ? `📷 Back Camera ${backIndex + 1}` : '📷 Back Camera';
+    }
+
+    return camera.label || `📷 Camera ${index + 1}`;
+  };
+
   const handleSwitchCamera = (e) => {
     const newCamId = e.target.value;
     setSelectedCameraId(newCamId);
@@ -258,10 +279,12 @@ export default function QRScannerModal({ onClose, onScanSuccess, activeEvent }) 
             <select
               value={selectedCameraId}
               onChange={handleSwitchCamera}
-              className="p-1 rounded-lg border border-[#EFE7DA] bg-white text-xs text-[#3A322C]"
+              className="p-1.5 rounded-lg border border-[#EFE7DA] bg-white text-xs font-medium text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
             >
-              {cameras.map(c => (
-                <option key={c.id} value={c.id}>{c.label || `Camera ${c.id.slice(0, 8)}`}</option>
+              {cameras.map((c, idx) => (
+                <option key={c.id} value={c.id}>
+                  {formatCameraLabel(c, idx, cameras)}
+                </option>
               ))}
             </select>
           </div>
