@@ -506,9 +506,11 @@ export default function AdminPortal({ user, onUserUpdated }) {
   const getRecentBirthdays = () => {
     if (!allUsers || allUsers.length === 0) return [];
 
+    // Convert current time to IST date (Asia/Kolkata)
     const now = new Date();
-    const currentYear = now.getFullYear();
-    const today = new Date(currentYear, now.getMonth(), now.getDate());
+    const istDateParts = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }).split('-').map(Number);
+    const currentYear = istDateParts[0];
+    const today = new Date(istDateParts[0], istDateParts[1] - 1, istDateParts[2]);
 
     const results = [];
 

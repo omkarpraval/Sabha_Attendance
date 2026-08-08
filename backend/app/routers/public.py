@@ -1,4 +1,4 @@
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from typing import List, Optional
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -21,7 +21,7 @@ def get_public_leaderboard(db: Session = Depends(get_db)):
         User.status == UserStatus.APPROVED
     ).all()
 
-    ist_today = (datetime.utcnow() + timedelta(hours=5, minutes=30)).strftime("%Y-%m-%d")
+    ist_today = (datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)).strftime("%Y-%m-%d")
     
     # Total actual Sabhas conducted till now overall: events that have attendance records or are CLOSED
     events_with_att_subquery = db.query(Attendance.event_id).distinct()
@@ -166,8 +166,8 @@ def get_public_live_status(db: Session = Depends(get_db)):
     """
     Returns current active event, next upcoming event, or latest event status with full date, timing, and venue location.
     """
-    now = datetime.now()
-    today_str = now.strftime("%Y-%m-%d")
+    ist_now = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
+    today_str = ist_now.strftime("%Y-%m-%d")
 
     # 1. Check for Active / Open event today
     active_event = db.query(Event).filter(
