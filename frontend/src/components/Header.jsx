@@ -26,8 +26,8 @@ export default function Header({ user, onLogout, onSwitchAccount, onInstallPWA, 
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#FDFBF7] border border-[#EFE7DA] text-[#3A322C]">
               {user.role === 'admin' && <Shield className="w-3.5 h-3.5 text-[#8B3A3A]" />}
               {user.role === 'karyakar' && <Award className="w-3.5 h-3.5 text-[#E8A33D]" />}
-              {user.role === 'user' && <UserCheck className="w-3.5 h-3.5 text-[#5B8C5B]" />}
-              <span className="capitalize">{user.role}</span>
+              {(user.role === 'yuvak' || user.role === 'user') && <UserCheck className="w-3.5 h-3.5 text-[#5B8C5B]" />}
+              <span className="capitalize">{user.role === 'user' ? 'Yuvak' : user.role}</span>
             </div>
 
             {/* PWA Prompt button if available */}

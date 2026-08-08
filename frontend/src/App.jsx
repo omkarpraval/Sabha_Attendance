@@ -305,7 +305,7 @@ export default function App() {
               {user.role === 'karyakar' && (
                 <KaryakarPortal user={user} onUserUpdated={checkAuth} />
               )}
-              {user.role === 'user' && (
+              {(user.role === 'yuvak' || user.role === 'user') && (
                 <UserPortal user={user} onUserUpdated={checkAuth} />
               )}
             </div>
