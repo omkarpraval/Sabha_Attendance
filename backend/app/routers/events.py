@@ -336,6 +336,14 @@ def delete_recurring_series(
     if not events_to_delete:
         raise HTTPException(status_code=404, detail="No matching events found for this recurring series.")
 
+    # Collect all affected user IDs before deletion
+    event_ids_to_delete = [ev.id for ev in events_to_delete]
+    affected_user_ids = [
+        a[0] for a in db.query(Attendance.user_id)
+        .filter(Attendance.event_id.in_(event_ids_to_delete))
+        .distinct().all()
+    ]
+
     deleted_count = 0
     for ev in events_to_delete:
         att_ids = [a[0] for a in db.query(Attendance.id).filter(Attendance.event_id == ev.id).all()]
@@ -344,6 +352,11 @@ def delete_recurring_series(
         db.query(Attendance).filter(Attendance.event_id == ev.id).delete(synchronize_session=False)
         db.delete(ev)
         deleted_count += 1
+
+    db.flush()
+
+    # Recalculate streak for all affected users
+    _recalculate_user_streaks(affected_user_ids, db)
 
     db.commit()
     return {
@@ -357,10 +370,13 @@ def delete_single_event(
     current_user: User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
-    """Deletes a single event and its associated attendance records."""
+    """Deletes a single event and its associated attendance records. Recalculates affected users' streaks."""
     ev = db.query(Event).filter(Event.id == event_id).first()
     if not ev:
         raise HTTPException(status_code=404, detail="Event not found")
+
+    # Collect affected user IDs before deletion
+    affected_user_ids = [a[0] for a in db.query(Attendance.user_id).filter(Attendance.event_id == ev.id).distinct().all()]
 
     att_ids = [a[0] for a in db.query(Attendance.id).filter(Attendance.event_id == ev.id).all()]
     if att_ids:
@@ -368,5 +384,47 @@ def delete_single_event(
     db.query(Attendance).filter(Attendance.event_id == ev.id).delete(synchronize_session=False)
 
     db.delete(ev)
+    db.flush()
+
+    # Recalculate streak and lifetime_count for all affected users
+    _recalculate_user_streaks(affected_user_ids, db)
+
     db.commit()
     return {"status": "success", "message": f"Event '{ev.title}' deleted successfully."}
+
+
+def _recalculate_user_streaks(user_ids: list, db: Session):
+    """Recalculate current_streak and lifetime_count for a list of user IDs from live attendance data."""
+    # All conducted events in latest-first order
+    all_conducted = db.query(Event).filter(
+        Event.status.in_([EventStatus.CLOSED, EventStatus.OPEN])
+    ).order_by(Event.event_date.desc(), Event.start_time.desc()).all()
+
+    for uid in user_ids:
+        user = db.query(User).filter(User.id == uid).first()
+        if not user:
+            continue
+
+        # Count remaining present records
+        present_atts = db.query(Attendance).filter(
+            Attendance.user_id == uid,
+            Attendance.status == AttendanceStatus.PRESENT
+        ).all()
+        user.lifetime_count = len(present_atts)
+
+        if len(present_atts) == 0:
+            user.current_streak = 0
+            continue
+
+        present_event_ids = {a.event_id for a in present_atts}
+
+        streak = 0
+        for ev in all_conducted:
+            if ev.id in present_event_ids:
+                streak += 1
+            else:
+                has_any_att = db.query(Attendance).filter(Attendance.event_id == ev.id).count()
+                if has_any_att > 0 or ev.status == EventStatus.CLOSED:
+                    break
+
+        user.current_streak = streak

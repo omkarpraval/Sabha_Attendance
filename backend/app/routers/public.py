@@ -23,15 +23,18 @@ def get_public_leaderboard(db: Session = Depends(get_db)):
 
     ist_today = (datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)).strftime("%Y-%m-%d")
     
-    # Total actual Sabhas conducted till now overall: events that have attendance records or are CLOSED
+    # Total actual Sabhas conducted till now: events that have attendance records OR are CLOSED
     events_with_att_subquery = db.query(Attendance.event_id).distinct()
     overall_conducted_events = db.query(Event).filter(
         (Event.id.in_(events_with_att_subquery)) | (Event.status == EventStatus.CLOSED)
     ).filter(Event.event_date <= ist_today).count()
-    if overall_conducted_events == 0:
-        overall_conducted_events = 1
 
     leaderboard_data = []
+
+    # Get all conducted events in chronological order for streak calculation
+    all_conducted_events = db.query(Event).filter(
+        (Event.id.in_(db.query(Attendance.event_id).distinct())) | (Event.status == EventStatus.CLOSED)
+    ).filter(Event.event_date <= ist_today).order_by(Event.event_date.desc(), Event.start_time.desc()).all()
 
     for u in users:
         attendances = db.query(Attendance, Event).join(Event, Attendance.event_id == Event.id).filter(
@@ -40,9 +43,11 @@ def get_public_leaderboard(db: Session = Depends(get_db)):
 
         punctuality_minutes_list = []
         present_count = 0
+        present_event_ids = set()
         for att, ev in attendances:
             if getattr(att.status, 'value', str(att.status)).lower() == 'present':
                 present_count += 1
+                present_event_ids.add(ev.id)
             try:
                 ev_start_dt = datetime.strptime(f"{ev.event_date} {ev.start_time}", "%Y-%m-%d %H:%M")
                 diff_minutes = (att.timestamp - ev_start_dt).total_seconds() / 60.0
@@ -50,16 +55,23 @@ def get_public_leaderboard(db: Session = Depends(get_db)):
             except Exception:
                 pass
 
-        # Fallback to lifetime_count if present_count is 0 but lifetime_count > 0
-        final_present = present_count if present_count > 0 else (u.lifetime_count or 0)
+        # ✅ Purely dynamic: no fallback to stale stored fields
+        final_present = present_count
 
-        # Calculate effective streak: if u.current_streak is 0 but user attended, fallback to final_present
-        effective_streak = u.current_streak or 0
-        if effective_streak == 0 and final_present > 0:
-            effective_streak = final_present
+        # ✅ Dynamically calculate streak from actual attendance records
+        # Walk conducted events latest→oldest; count consecutive present, break on first absent
+        dynamic_streak = 0
+        for ev in all_conducted_events:
+            if ev.id in present_event_ids:
+                dynamic_streak += 1
+            else:
+                # Event was conducted (has attendance OR is closed) but user wasn't present — break streak
+                has_any_att = db.query(Attendance).filter(Attendance.event_id == ev.id).count()
+                if has_any_att > 0 or ev.status == EventStatus.CLOSED:
+                    break
 
         # Per-user total events overall
-        user_total_events = max(overall_conducted_events, final_present, 1)
+        user_total_events = max(overall_conducted_events, 1)
         turnout_pct = min(100, round((final_present / user_total_events * 100)))
 
         avg_punctuality = sum(punctuality_minutes_list) / len(punctuality_minutes_list) if punctuality_minutes_list else 999.0
@@ -69,8 +81,8 @@ def get_public_leaderboard(db: Session = Depends(get_db)):
             "name": u.name,
             "phone": u.phone,
             "member_category": u.member_category or "satsangi",
-            "current_streak": effective_streak,
-            "lifetime_count": u.lifetime_count or 0,
+            "current_streak": dynamic_streak,
+            "lifetime_count": final_present,
             "present_count": final_present,
             "total_events": user_total_events,
             "turnout_pct": int(turnout_pct),
