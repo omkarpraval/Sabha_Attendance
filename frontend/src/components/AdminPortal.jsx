@@ -515,12 +515,36 @@ export default function AdminPortal({ user, onUserUpdated }) {
     for (const u of allUsers) {
       if (!u.dob) continue;
 
-      const parts = u.dob.split('-');
-      if (parts.length !== 3) continue;
+      let birthYear, birthMonth, birthDay;
 
-      const birthYear = parseInt(parts[0], 10);
-      const birthMonth = parseInt(parts[1], 10) - 1;
-      const birthDay = parseInt(parts[2], 10);
+      // Handle both YYYY-MM-DD, D-M-YYYY, M/D/YYYY, YYYY/M/D formats
+      if (u.dob.includes('-')) {
+        const parts = u.dob.split('-');
+        if (parts.length !== 3) continue;
+        if (parts[0].length === 4) {
+          birthYear = parseInt(parts[0], 10);
+          birthMonth = parseInt(parts[1], 10) - 1;
+          birthDay = parseInt(parts[2], 10);
+        } else {
+          birthYear = parseInt(parts[2], 10);
+          birthMonth = parseInt(parts[1], 10) - 1;
+          birthDay = parseInt(parts[0], 10);
+        }
+      } else if (u.dob.includes('/')) {
+        const parts = u.dob.split('/');
+        if (parts.length !== 3) continue;
+        if (parts[2].length === 4) {
+          birthYear = parseInt(parts[2], 10);
+          birthMonth = parseInt(parts[0], 10) - 1;
+          birthDay = parseInt(parts[1], 10);
+        } else if (parts[0].length === 4) {
+          birthYear = parseInt(parts[0], 10);
+          birthMonth = parseInt(parts[1], 10) - 1;
+          birthDay = parseInt(parts[2], 10);
+        }
+      } else {
+        continue;
+      }
 
       if (isNaN(birthYear) || isNaN(birthMonth) || isNaN(birthDay)) continue;
 
@@ -528,14 +552,17 @@ export default function AdminPortal({ user, onUserUpdated }) {
       const diffTime = today.getTime() - bdayThisYear.getTime();
       const diffDays = Math.round(diffTime / (1000 * 3600 * 24));
 
-      if (diffDays >= 0 && diffDays <= 7) {
+      // Show birthdays today (0), past 7 days (1..7), and upcoming 7 days (-7..-1)
+      if (diffDays >= -7 && diffDays <= 7) {
         const age = currentYear - birthYear;
         results.push({
           user: u,
           diffDays,
           isToday: diffDays === 0,
+          isUpcoming: diffDays < 0,
+          daysUntil: Math.abs(diffDays),
           age,
-          formattedDob: `${parts[2]}/${parts[1]}/${parts[0]}`
+          formattedDob: `${birthDay}/${birthMonth + 1}/${birthYear}`
         });
       }
     }
@@ -1059,7 +1086,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
                         )}
                       </h3>
                       <p className="text-xs text-[#3A322C]/70">
-                        Members celebrating birthdays today or in the past 7 days
+                        Members celebrating birthdays today, recent past, or upcoming days
                       </p>
                     </div>
                   </div>
@@ -1084,11 +1111,15 @@ export default function AdminPortal({ user, onUserUpdated }) {
                         <div>
                           <div className="flex items-center gap-1.5 font-bold text-xs text-[#3A322C]">
                             <span>{item.user.name}</span>
-                            {item.isToday && (
-                              <span className="px-2 py-0.5 rounded-full text-[9px] bg-[#5B8C5B]/15 text-[#5B8C5B] border border-[#5B8C5B]/30 font-bold uppercase tracking-wider">
-                                Today
+                            {item.isToday ? (
+                              <span className="px-2 py-0.5 rounded-full text-[9px] bg-[#E8A33D] text-white font-bold uppercase tracking-wider">
+                                Birthday Today!
                               </span>
-                            )}
+                            ) : item.isUpcoming ? (
+                              <span className="px-2 py-0.5 rounded-full text-[9px] bg-[#5B8C5B]/15 text-[#5B8C5B] font-bold uppercase tracking-wider">
+                                Upcoming
+                              </span>
+                            ) : null}
                           </div>
                           <div className="text-[11px] text-[#3A322C]/70 mt-0.5 flex items-center gap-1">
                             <Phone className="w-3 h-3 text-[#8B3A3A]" />
@@ -1097,7 +1128,11 @@ export default function AdminPortal({ user, onUserUpdated }) {
                         </div>
                         <div className="text-right">
                           <div className="text-xs font-bold text-[#8B3A3A]">
-                            {item.isToday ? `Turning ${item.age}` : `${item.diffDays} day${item.diffDays > 1 ? 's' : ''} ago`}
+                            {item.isToday
+                              ? `Turning ${item.age}`
+                              : item.isUpcoming
+                              ? `In ${item.daysUntil} day${item.daysUntil > 1 ? 's' : ''}`
+                              : `${item.diffDays} day${item.diffDays > 1 ? 's' : ''} ago`}
                           </div>
                           <div className="text-[10px] text-[#3A322C]/60 font-mono">
                             {item.user.dob}
