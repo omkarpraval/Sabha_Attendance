@@ -46,6 +46,33 @@ export default function UserManagementSection({ currentUser }) {
     education_stream: '',
     study_details: ''
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await apiFetch('/users');
+      setUsers(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenBulkModal = () => {
+    setBulkFile(null);
+    setBulkPreviewData([]);
+    setError('');
+    setSuccess('');
+    setIsBulkModalOpen(true);
+  };
 
   const handleDownloadSampleCSV = () => {
     const csvContent = "data:text/csv;charset=utf-8," + 
