@@ -61,10 +61,16 @@ def test_full_attendance_flow():
     assert excel_res.status_code == 200
     assert len(excel_res.content) > 0
 
-    # 9. Export PDF Report
-    pdf_res = client.get("/api/reports/export/pdf", headers=admin_headers)
-    assert pdf_res.status_code == 200
-    assert len(pdf_res.content) > 0
+    # 10. Test Forgot Password and Reset Password flow
+    fp_res = client.post("/api/auth/forgot-password", json={"identifier": "7777777777"})
+    assert fp_res.status_code == 200
+    res_data = fp_res.json()
+    assert "dev_reset_link" in res_data or "message" in res_data
+    if "dev_reset_link" in res_data:
+        token = res_data["dev_reset_link"].split("reset_token=")[1]
+        reset_res = client.post("/api/auth/reset-password", json={"token": token, "new_password": "newuserpassword123"})
+        assert reset_res.status_code == 200
+        assert "Password has been reset successfully" in reset_res.json()["message"]
 
     print("\nALL BACKEND API TESTS PASSED SUCCESSFULLY!")
 

@@ -14,9 +14,10 @@ from app.models import User, UserRole, UserStatus
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 def hash_password(password: str) -> str:
-    """Hashes a password using bcrypt salted hashing."""
+    """Hashes a password using bcrypt salted hashing, safely truncating to 72 bytes."""
+    pwd_bytes = password.encode('utf-8')[:72]
     salt = bcrypt.gensalt()
-    return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+    return bcrypt.hashpw(pwd_bytes, salt).decode('utf-8')
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verifies a plain password against stored bcrypt hash with backwards compatibility for legacy sha256."""
@@ -27,7 +28,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         legacy_hash = hashlib.sha256(f"{settings.SECRET_KEY}:{plain_password}".encode('utf-8')).hexdigest()
         return legacy_hash == hashed_password
     try:
-        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+        pwd_bytes = plain_password.encode('utf-8')[:72]
+        return bcrypt.checkpw(pwd_bytes, hashed_password.encode('utf-8'))
     except Exception:
         return False
 

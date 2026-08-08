@@ -80,7 +80,7 @@ def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
     }
 
 @router.post("/forgot-password")
-def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
+def forgot_password(req: ForgotPasswordRequest, request: Request, db: Session = Depends(get_db)):
     user = db.query(User).filter(
         (User.phone == req.identifier) | (User.email == req.identifier)
     ).first()
@@ -106,7 +106,14 @@ def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
     user.reset_token_hash = hash_password(reset_token)
     db.commit()
 
-    reset_link = f"http://localhost:5173/?reset_token={reset_token}"
+    # Determine base frontend URL dynamically from request Origin/Referer header or settings
+    origin = request.headers.get("origin") or request.headers.get("referer")
+    if origin:
+        base_url = origin.rstrip("/").split("?")[0]
+    else:
+        base_url = getattr(settings, "FRONTEND_URL", "http://localhost:5173").rstrip("/")
+
+    reset_link = f"{base_url}/?reset_token={reset_token}"
     email_sent = send_password_reset_email(
         user_email=user.email,
         user_name=user.name,
