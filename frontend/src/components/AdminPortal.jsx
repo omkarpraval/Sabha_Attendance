@@ -3,7 +3,7 @@ import {
   Shield, Users, MapPin, Calendar, QrCode, FileSpreadsheet, FileText,
   UserCheck, UserX, Plus, CheckCircle2, AlertCircle, Edit, History,
   Lock, RefreshCw, Download, Layers, Award, Trash2, ChevronDown, Filter, X, Sparkles, Clock, Link2, Search, User, Check, XCircle, Printer,
-  Flame, TrendingUp, Activity, BarChart3, PieChart, Zap, BellRing, Cake, Phone
+  Flame, TrendingUp, Activity, BarChart3, PieChart, Zap, BellRing, Cake, Phone, UserPlus, Mail, Briefcase, GraduationCap
 } from 'lucide-react';
 import { apiFetch } from '../api';
 import VenueMap from './VenueMap';
