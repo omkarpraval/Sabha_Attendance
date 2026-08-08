@@ -1703,18 +1703,45 @@ export default function AdminPortal({ user, onUserUpdated }) {
                             </div>
                           </div>
 
-                          {/* Upcoming Tenure Dates Text Display */}
-                          <div className="p-3 rounded-xl bg-white border border-[#EFE7DA] space-y-1">
-                            <div className="text-[10px] font-bold uppercase text-[#8B3A3A] tracking-wider flex items-center gap-1">
-                              <Calendar className="w-3 h-3 shrink-0" />
-                              <span>Tenure Dates ({tenureDates.length} Occurrences):</span>
+                          {/* Upcoming Tenure Dates & Mobile-Responsive Skip Manager */}
+                          <div className="p-3 rounded-xl bg-white border border-[#EFE7DA] space-y-2">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                              <div className="text-[10px] font-bold uppercase text-[#8B3A3A] tracking-wider flex items-center gap-1">
+                                <Calendar className="w-3.5 h-3.5 shrink-0 text-[#8B3A3A]" />
+                                <span>Tenure Dates ({group.allEvents.length} Occurrences):</span>
+                              </div>
+                              <span className="text-[10px] text-[#8B3A3A] font-semibold italic">Tap ✖ on date to skip occurrence</span>
                             </div>
-                            <p className="text-[11px] text-[#3A322C]/80 font-mono leading-relaxed break-words">
-                              {upcomingDates.length > 0
-                                ? `Upcoming: ${upcomingDates.slice(0, 6).join(', ')}${upcomingDates.length > 6 ? ` (+${upcomingDates.length - 6} more)` : ''}`
-                                : `Tenure Completed (${tenureDates.join(', ')})`
-                              }
-                            </p>
+
+                            <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1 custom-scrollbar">
+                              {group.allEvents.length === 0 ? (
+                                <span className="text-xs text-[#3A322C]/60 italic">No dates scheduled</span>
+                              ) : (
+                                group.allEvents.map((evObj) => {
+                                  const isPast = evObj.event_date < new Date().toISOString().split('T')[0];
+                                  return (
+                                    <div
+                                      key={evObj.id}
+                                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-mono border transition-all ${
+                                        isPast
+                                          ? 'bg-gray-100 text-gray-500 border-gray-200 opacity-60'
+                                          : 'bg-[#FDFBF7] text-[#3A322C] border-[#EFE7DA] hover:border-[#8B3A3A]/40'
+                                      }`}
+                                    >
+                                      <span>{evObj.event_date}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteSingleEvent(evObj)}
+                                        className="text-gray-400 hover:text-[#C1554A] p-0.5 rounded-md hover:bg-[#C1554A]/10 cursor-pointer transition-colors"
+                                        title={`Skip / Cancel Sabha occurrence on ${evObj.event_date}`}
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  );
+                                })
+                              )}
+                            </div>
                           </div>
                         </div>
 
