@@ -30,12 +30,26 @@ except Exception:
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
-try:
-    with engine.begin() as conn:
-        conn.execute(text("DELETE FROM attendance WHERE event_id IN (SELECT id FROM events WHERE title IN ('Weekly Saturday Sabha - Past', 'Weekly Saturday Sabha - Live', 'Special Janmashtami Maha Sabha'));"))
-        conn.execute(text("DELETE FROM events WHERE title IN ('Weekly Saturday Sabha - Past', 'Weekly Saturday Sabha - Live', 'Special Janmashtami Maha Sabha');"))
-except Exception as e_clean:
-    print(f"[DB CLEANUP] {e_clean}")
+def cleanup_demo_seed_data():
+    from app.database import SessionLocal
+    from app.models import Event, Attendance
+    db = SessionLocal()
+    try:
+        demo_titles = ['Weekly Saturday Sabha - Past', 'Weekly Saturday Sabha - Live', 'Special Janmashtami Maha Sabha']
+        demo_events = db.query(Event).filter(Event.title.in_(demo_titles)).all()
+        if demo_events:
+            demo_ids = [e.id for e in demo_events]
+            db.query(Attendance).filter(Attendance.event_id.in_(demo_ids)).delete(synchronize_session=False)
+            db.query(Event).filter(Event.id.in_(demo_ids)).delete(synchronize_session=False)
+            db.commit()
+            print(f"[DB CLEANUP] Successfully purged {len(demo_events)} demo seed events and attendance records!")
+    except Exception as e:
+        db.rollback()
+        print(f"[DB CLEANUP ERROR] {e}")
+    finally:
+        db.close()
+
+cleanup_demo_seed_data()
 
 def ensure_initial_admins():
     from app.database import SessionLocal
