@@ -53,6 +53,11 @@ def get_public_leaderboard(db: Session = Depends(get_db)):
         # Fallback to lifetime_count if present_count is 0 but lifetime_count > 0
         final_present = present_count if present_count > 0 else (u.lifetime_count or 0)
 
+        # Calculate effective streak: if u.current_streak is 0 but user attended, fallback to final_present
+        effective_streak = u.current_streak or 0
+        if effective_streak == 0 and final_present > 0:
+            effective_streak = final_present
+
         # Per-user total events overall
         user_total_events = max(overall_conducted_events, final_present, 1)
         turnout_pct = min(100, round((final_present / user_total_events * 100)))
@@ -64,7 +69,7 @@ def get_public_leaderboard(db: Session = Depends(get_db)):
             "name": u.name,
             "phone": u.phone,
             "member_category": u.member_category or "satsangi",
-            "current_streak": u.current_streak or 0,
+            "current_streak": effective_streak,
             "lifetime_count": u.lifetime_count or 0,
             "present_count": final_present,
             "total_events": user_total_events,
@@ -72,7 +77,15 @@ def get_public_leaderboard(db: Session = Depends(get_db)):
             "avg_punctuality": round(avg_punctuality, 1)
         })
 
-    leaderboard_data.sort(key=lambda x: (-x["current_streak"], x["avg_punctuality"], -x["lifetime_count"]))
+    # Ranking Hierarchy:
+    # 1. Most active consecutive weekly streak (current_streak descending)
+    # 2. Tie-breaker if streaks equal (e.g. all 0): Most events present/attended (present_count descending)
+    # 3. Tie-breaker if attendance count equal: Earliest average arrival time overall (avg_punctuality ascending)
+    leaderboard_data.sort(key=lambda x: (
+        -x["current_streak"],
+        -x["present_count"],
+        x["avg_punctuality"]
+    ))
 
     for index, item in enumerate(leaderboard_data):
         item["rank"] = index + 1
