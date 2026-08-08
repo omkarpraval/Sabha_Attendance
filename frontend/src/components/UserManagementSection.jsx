@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, UserPlus, Pencil, CheckCircle2, AlertCircle, Eye, EyeOff, Lock, User, Phone, Mail, Calendar, Shield, Sparkles, X, Trash2, UploadCloud, FileSpreadsheet, Download, Cake } from 'lucide-react';
+import { Search, UserPlus, Pencil, CheckCircle2, AlertCircle, Eye, EyeOff, Lock, User, Phone, Mail, Calendar, Shield, Sparkles, X, Trash2, UploadCloud, FileSpreadsheet, Download, Cake, MapPin, Briefcase, GraduationCap } from 'lucide-react';
 import { apiFetch } from '../api';
 
 export default function UserManagementSection({ currentUser }) {
@@ -985,18 +985,37 @@ export default function UserManagementSection({ currentUser }) {
                       <div key={idx} className="p-3 bg-[#FDFBF7] rounded-xl border border-[#EFE7DA] text-xs space-y-1.5">
                         <div className="flex items-center justify-between font-bold text-[#3A322C]">
                           <span className="truncate">{idx + 1}. {row.name}</span>
-                          {row.area && <span className="text-[11px] text-[#8B3A3A] shrink-0 font-medium ml-2">📍 {row.area}</span>}
+                          {row.area && (
+                            <span className="text-[11px] text-[#8B3A3A] shrink-0 font-medium ml-2 flex items-center gap-1">
+                              <MapPin className="w-3 h-3 text-[#8B3A3A]" />
+                              <span>{row.area}</span>
+                            </span>
+                          )}
                         </div>
-                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#3A322C]/70 font-mono">
-                          <span>📱 {row.phone}</span>
-                          {row.dob && <span>🎂 {row.dob}</span>}
+                        <div className="flex flex-wrap items-center gap-3 text-[11px] text-[#3A322C]/70 font-mono">
+                          <span className="flex items-center gap-1">
+                            <Phone className="w-3 h-3 text-[#3A322C]/50" />
+                            <span>{row.phone}</span>
+                          </span>
+                          {row.dob && (
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3 text-[#3A322C]/50" />
+                              <span>{row.dob}</span>
+                            </span>
+                          )}
                         </div>
                         {(row.occupation || row.education_stream || row.study_details) && (
-                          <div className="text-[11px] text-[#5B8C5B] font-medium bg-white px-2 py-1 rounded-lg border border-[#EFE7DA]">
+                          <div className="text-[11px] text-[#5B8C5B] font-medium bg-white px-2 py-1.5 rounded-lg border border-[#EFE7DA] flex items-center gap-1.5">
                             {row.is_working === 'Yes' ? (
-                              <span>💼 {row.occupation} {row.company_name ? `@ ${row.company_name}` : ''}</span>
+                              <>
+                                <Briefcase className="w-3.5 h-3.5 text-[#5B8C5B] shrink-0" />
+                                <span className="truncate">{row.occupation} {row.company_name ? `@ ${row.company_name}` : ''}</span>
+                              </>
                             ) : (
-                              <span>🎓 {row.education_stream || row.study_details}</span>
+                              <>
+                                <GraduationCap className="w-3.5 h-3.5 text-[#E8A33D] shrink-0" />
+                                <span className="truncate">{row.education_stream || row.study_details}</span>
+                              </>
                             )}
                           </div>
                         )}

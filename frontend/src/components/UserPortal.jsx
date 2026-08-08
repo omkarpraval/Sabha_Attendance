@@ -242,23 +242,40 @@ export default function UserPortal({ user, onUserUpdated }) {
         <div className="space-y-1">
           <div className="text-xs font-semibold text-[#8B3A3A] uppercase tracking-wider">Member Profile</div>
           <div className="flex flex-wrap items-center gap-3 text-xs text-[#3A322C]">
-            <span className="font-semibold">{user.name}</span>
-            {user.phone && <span className="font-mono text-[#3A322C]/70">📱 {user.phone}</span>}
-            {user.area && <span className="bg-[#FDFBF7] px-2.5 py-0.5 rounded-full border border-[#EFE7DA] text-[#8B3A3A] font-medium">📍 {user.area}</span>}
-            {user.dob && <span className="text-[#3A322C]/70">🎂 {user.dob}</span>}
+            <span className="font-bold text-sm text-[#3A322C]">{user.name}</span>
+            {user.phone && (
+              <span className="font-mono text-[#3A322C]/70 flex items-center gap-1">
+                <Phone className="w-3.5 h-3.5 text-[#3A322C]/50" />
+                <span>{user.phone}</span>
+              </span>
+            )}
+            {user.area && (
+              <span className="bg-[#FDFBF7] px-2.5 py-0.5 rounded-full border border-[#EFE7DA] text-[#8B3A3A] font-semibold flex items-center gap-1">
+                <MapPin className="w-3 h-3 text-[#8B3A3A]" />
+                <span>{user.area}</span>
+              </span>
+            )}
+            {user.dob && (
+              <span className="text-[#3A322C]/70 flex items-center gap-1 font-mono">
+                <CalendarIcon className="w-3.5 h-3.5 text-[#3A322C]/50" />
+                <span>{user.dob}</span>
+              </span>
+            )}
           </div>
         </div>
 
         {(user.is_working === 'Yes' || user.is_studying === 'Yes' || user.occupation || user.study_details) && (
           <div className="flex flex-wrap items-center gap-2 text-xs bg-[#FDFBF7] p-2.5 rounded-xl border border-[#EFE7DA]">
             {user.is_working === 'Yes' && (
-              <span className="bg-[#5B8C5B]/10 text-[#5B8C5B] px-2 py-0.5 rounded-md font-semibold">
-                💼 {user.occupation || 'Working'} {user.company_name ? `@ ${user.company_name}` : ''}
+              <span className="bg-[#5B8C5B]/10 text-[#5B8C5B] px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1.5">
+                <Briefcase className="w-3.5 h-3.5 text-[#5B8C5B]" />
+                <span>{user.occupation || 'Working'} {user.company_name ? `@ ${user.company_name}` : ''}</span>
               </span>
             )}
             {user.is_studying === 'Yes' && (
-              <span className="bg-[#E8A33D]/10 text-[#D98A2B] px-2 py-0.5 rounded-md font-semibold">
-                🎓 {user.education_stream || 'Studying'} {user.study_details ? `(${user.study_details})` : ''}
+              <span className="bg-[#E8A33D]/10 text-[#D98A2B] px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1.5">
+                <GraduationCap className="w-3.5 h-3.5 text-[#E8A33D]" />
+                <span>{user.education_stream || 'Studying'} {user.study_details ? `(${user.study_details})` : ''}</span>
               </span>
             )}
           </div>
