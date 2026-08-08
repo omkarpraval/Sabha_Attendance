@@ -11,7 +11,6 @@ export default function QRScannerModal({ onClose, onScanSuccess, activeEvent }) 
   const [isScanning, setIsScanning] = useState(false);
   const [cameras, setCameras] = useState([]);
   const [selectedCameraId, setSelectedCameraId] = useState('');
-  const [manualCode, setManualCode] = useState('');
 
   const html5QrCodeRef = useRef(null);
   const isStartingRef = useRef(false);
@@ -202,12 +201,6 @@ export default function QRScannerModal({ onClose, onScanSuccess, activeEvent }) 
     onScanSuccess(qrText, coords.latitude, coords.longitude);
   };
 
-  const handleManualSubmit = (e) => {
-    e.preventDefault();
-    if (!manualCode.trim()) return;
-    handleQRScanned(manualCode.trim());
-  };
-
   const handleSimulateScan = (qrRef, isFarAway = false) => {
     stopCameraScanner();
     let lat, lng;
@@ -323,28 +316,6 @@ export default function QRScannerModal({ onClose, onScanSuccess, activeEvent }) 
           </div>
           <div id="file-reader-temp" className="hidden"></div>
         </div>
-
-        {/* Manual Code Input Fallback */}
-        <form onSubmit={handleManualSubmit} className="bg-[#FDFBF7] p-3 rounded-xl border border-[#EFE7DA] space-y-2">
-          <label className="block text-xs font-semibold text-[#3A322C]">
-            Manual Reference Code Entry
-          </label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={manualCode}
-              onChange={(e) => setManualCode(e.target.value)}
-              placeholder="e.g. venue_central_mandir"
-              className="flex-1 p-2 rounded-xl border border-[#EFE7DA] bg-white text-xs text-[#3A322C] focus:outline-none focus:border-[#8B3A3A]"
-            />
-            <button
-              type="submit"
-              className="bg-[#5B8C5B] hover:bg-[#4A734A] text-white font-semibold text-xs px-3.5 py-2 rounded-xl transition-colors cursor-pointer"
-            >
-              Verify Code
-            </button>
-          </div>
-        </form>
 
         {/* Geofence Testing Options (Simulated Scans) */}
         <div className="bg-[#FDFBF7] p-3 rounded-xl border border-[#EFE7DA]">
