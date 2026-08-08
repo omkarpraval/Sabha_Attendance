@@ -65,12 +65,24 @@ def test_full_attendance_flow():
     fp_res = client.post("/api/auth/forgot-password", json={"identifier": "7777777777"})
     assert fp_res.status_code == 200
     res_data = fp_res.json()
-    assert "dev_reset_link" in res_data or "message" in res_data
-    if "dev_reset_link" in res_data:
-        token = res_data["dev_reset_link"].split("reset_token=")[1]
-        reset_res = client.post("/api/auth/reset-password", json={"token": token, "new_password": "newuserpassword123"})
-        assert reset_res.status_code == 200
-        assert "Password has been reset successfully" in reset_res.json()["message"]
+    assert "dev_reset_link" not in res_data
+    assert "reset_token" not in res_data
+    assert "Password reset link has been sent" in res_data["message"]
+
+    # Test reset password using valid JWT reset token directly
+    from app.routers.auth import create_access_token, hash_password
+    from app.models import User
+    from app.database import SessionLocal
+    db = SessionLocal()
+    u = db.query(User).filter(User.phone == "7777777777").first()
+    reset_tok = create_access_token(data={"sub": u.phone, "type": "password_reset"})
+    u.reset_token_hash = hash_password(reset_tok)
+    db.commit()
+    db.close()
+
+    reset_res = client.post("/api/auth/reset-password", json={"token": reset_tok, "new_password": "newuserpassword123"})
+    assert reset_res.status_code == 200
+    assert "Password updated successfully" in reset_res.json()["message"]
 
     print("\nALL BACKEND API TESTS PASSED SUCCESSFULLY!")
 

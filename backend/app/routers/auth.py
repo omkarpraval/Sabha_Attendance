@@ -122,13 +122,12 @@ def forgot_password(req: ForgotPasswordRequest, request: Request, db: Session = 
     )
 
     if not email_sent:
-        return {
-            "message": f"Password reset token generated for {user.email}.",
-            "dev_reset_link": reset_link,
-            "reset_token": reset_token
-        }
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to deliver password reset email. Please ensure SMTP credentials or API key are set, or contact Admin."
+        )
 
-    return {"message": f"Password reset link has been sent to {user.email}. Please check your inbox.", "reset_token": reset_token}
+    return {"message": f"Password reset link has been sent to {user.email}. Please check your email inbox."}
 
 @router.post("/reset-password")
 def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_db)):

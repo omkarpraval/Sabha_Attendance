@@ -21,7 +21,6 @@ export default function AuthModal({ onLoginSuccess, onClose }) {
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
-  const [devResetToken, setDevResetToken] = useState(null);
 
   useEffect(() => {
     // Check if URL has ?reset_token=...
@@ -112,10 +111,6 @@ export default function AuthModal({ onLoginSuccess, onClose }) {
           body: JSON.stringify({ identifier }),
         });
         setInfo(res.message);
-        if (res.reset_token || res.dev_reset_link) {
-          const tok = res.reset_token || (res.dev_reset_link ? res.dev_reset_link.split('reset_token=')[1] : null);
-          setDevResetToken(tok);
-        }
       } else if (mode === 'reset') {
         const res = await apiFetch('/auth/reset-password', {
           method: 'POST',
@@ -172,27 +167,9 @@ export default function AuthModal({ onLoginSuccess, onClose }) {
           </div>
         )}
         {info && (
-          <div className="mb-4 p-3.5 rounded-xl bg-[#5B8C5B]/10 border border-[#5B8C5B]/30 text-[#5B8C5B] text-xs font-medium space-y-2">
-            <div className="flex items-start gap-2">
-              <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>{info}</span>
-            </div>
-            {devResetToken && (
-              <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setResetToken(devResetToken);
-                    setMode('reset');
-                    setInfo('');
-                  }}
-                  className="w-full py-2.5 px-3.5 rounded-xl bg-[#5B8C5B] hover:bg-[#4A734A] text-white text-xs font-bold shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
-                >
-                  <KeyRound className="w-4 h-4" />
-                  <span>Click Here to Set New Password Now →</span>
-                </button>
-              </div>
-            )}
+          <div className="mb-4 p-3 rounded-xl bg-[#5B8C5B]/10 border border-[#5B8C5B]/30 text-[#5B8C5B] text-xs font-medium flex items-start gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{info}</span>
           </div>
         )}
 
