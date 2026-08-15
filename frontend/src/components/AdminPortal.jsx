@@ -359,6 +359,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [analyticsData, setAnalyticsData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [syncingModal, setSyncingModal] = useState(false);
   const [toast, setToast] = useState('');
   const [adminBirthdayData, setAdminBirthdayData] = useState({ today_birthdays: [], upcoming_birthdays: [] });
 
@@ -466,6 +467,27 @@ export default function AdminPortal({ user, onUserUpdated }) {
       console.error("Admin data load error:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Sync / Refresh attendance data for the open modal without full page reload
+  const handleSyncModalData = async () => {
+    setSyncingModal(true);
+    try {
+      const [attList, evList, usrList] = await Promise.all([
+        apiFetch('/attendance/history'),
+        apiFetch('/events'),
+        apiFetch('/users?status=approved'),
+      ]);
+      setAttendanceRecords(attList);
+      setEvents(evList);
+      setAllUsers(usrList);
+      showToast('Attendance data synced successfully!');
+    } catch (err) {
+      console.error('Sync error:', err);
+      showToast('Sync failed. Please try again.');
+    } finally {
+      setSyncingModal(false);
     }
   };
 
@@ -2715,6 +2737,16 @@ export default function AdminPortal({ user, onUserUpdated }) {
                       className="bg-[#5B8C5B] hover:bg-[#4A734A] text-white font-semibold text-xs px-3 py-2 rounded-xl flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
                     >
                       <FileSpreadsheet className="w-3.5 h-3.5" /> Excel Report
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSyncModalData}
+                      disabled={syncingModal}
+                      className={`bg-[#FDFBF7] hover:bg-[#8B3A3A]/10 text-[#8B3A3A] border border-[#EFE7DA] font-semibold text-xs px-3 py-2 rounded-xl flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs ${syncingModal ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      title="Sync / Refresh Attendance Data"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${syncingModal ? 'animate-spin' : ''}`} />
+                      {syncingModal ? 'Syncing...' : 'Sync'}
                     </button>
                     <button
                       onClick={() => setSelectedDetailModal(null)}
