@@ -3240,7 +3240,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
                 )}
                 <div>Time Slot: <strong>{eventForm.start_time} - {eventForm.end_time} IST</strong></div>
                 <div>Venue: <strong>{venues.find(v => v.id === eventForm.venue_id)?.name || 'Central Sabha Mandir'}</strong></div>
-                <div>QR Code Mode: <strong>{eventForm.event_type === 'recurring' ? 'Automatic Permanent Reusable QR' : 'Automatic Fresh Per-Event QR'}</strong></div>
+                <div>QR Code Mode: <strong>Venue-Based Reusable QR (same QR for all events at this location)</strong></div>
               </div>
             )}
 
