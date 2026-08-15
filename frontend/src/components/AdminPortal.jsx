@@ -1604,7 +1604,14 @@ export default function AdminPortal({ user, onUserUpdated }) {
         });
         const recurringGroups = Object.values(recurringGroupMap);
 
-        // 3. Common Finished & Special Events History (All Concluded & Special Events)
+        // 3. Upcoming / Scheduled One-Time Events (open, not recurring, not currently live)
+        const upcomingOneTimeEvents = searchedEvents.filter(ev =>
+          ev.status !== 'closed' &&
+          ev.qr_mode !== 'reusable' &&
+          (!primaryLiveEvent || ev.id !== primaryLiveEvent.id)
+        );
+
+        // 4. Common Finished & Special Events History (All Concluded & Special Events)
         const searchedClosedEvents = searchedEvents.filter(ev => ev.status === 'closed');
 
         return (
@@ -1865,7 +1872,90 @@ export default function AdminPortal({ user, onUserUpdated }) {
               )}
             </div>
 
-            {/* 📜 SECTION 3: COMMON FINISHED & COMPLETED EVENTS ARCHIVE (AT BOTTOM) */}
+            {/* 📋 SECTION 3: UPCOMING & SCHEDULED ONE-TIME EVENTS */}
+            <div className="bg-white rounded-2xl p-4 sm:p-6 warm-shadow border border-[#EFE7DA] space-y-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-[#EFE7DA] pb-3">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-[#5B8C5B] shrink-0" />
+                  <h4 className="font-serif-accent text-lg sm:text-xl font-bold text-[#8B3A3A]">
+                    Upcoming & Scheduled Events ({upcomingOneTimeEvents.length})
+                  </h4>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] bg-[#5B8C5B]/15 text-[#5B8C5B] font-bold uppercase tracking-wider shrink-0">
+                  One-Time • Open Events
+                </span>
+              </div>
+
+              {upcomingOneTimeEvents.length === 0 ? (
+                <div className="py-6 text-center text-xs text-[#3A322C]/60 italic">
+                  No upcoming or scheduled one-time events. All open events are either live or part of a recurring series.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {upcomingOneTimeEvents.map((ev) => {
+                    const liveState = getEventLiveState(ev);
+                    return (
+                      <div key={ev.id} className="p-4 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] space-y-3 flex flex-col justify-between">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-bold text-sm text-[#3A322C] truncate">{ev.title}</span>
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase shrink-0 ${
+                              liveState.isUpcoming
+                                ? 'bg-[#E8A33D]/15 text-[#D98A2B]'
+                                : 'bg-[#5B8C5B]/15 text-[#5B8C5B]'
+                            }`}>
+                              {liveState.isUpcoming ? 'UPCOMING' : 'OPEN'}
+                            </span>
+                          </div>
+
+                          <div className="text-xs text-[#3A322C]/70 space-y-0.5">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-3.5 h-3.5 text-[#8B3A3A]" />
+                              <span>Date: {ev.event_date} ({ev.start_time} - {ev.end_time} IST)</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <MapPin className="w-3.5 h-3.5 text-[#8B3A3A]" />
+                              <span>Venue: {ev.venue_name || 'Central Mandir'}</span>
+                            </div>
+                            <div className="text-[10px] font-semibold text-[#E8A33D] pt-0.5 flex items-center gap-1">
+                              <Zap className="w-3 h-3" /> One-Time Event
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5 pt-2 border-t border-[#EFE7DA]">
+                          <div className="grid grid-cols-2 gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setEditingEvent(ev)}
+                              className="bg-[#8B3A3A]/10 hover:bg-[#8B3A3A]/20 text-[#8B3A3A] font-semibold text-xs py-1.5 px-2 rounded-lg flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                            >
+                              <Edit className="w-3.5 h-3.5" /> Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleViewQR(ev.id)}
+                              className="bg-white hover:bg-[#EFE7DA] text-[#8B3A3A] border border-[#EFE7DA] font-semibold text-xs py-1.5 px-2 rounded-lg flex items-center justify-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                            >
+                              <QrCode className="w-3.5 h-3.5" /> View QR
+                            </button>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteSingleEvent(ev)}
+                            className="w-full bg-[#C1554A]/10 hover:bg-[#C1554A]/20 text-[#C1554A] border border-[#C1554A]/30 font-semibold text-xs py-1.5 px-2 rounded-lg flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Delete Event
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* 📜 SECTION 4: COMMON FINISHED & COMPLETED EVENTS ARCHIVE (AT BOTTOM) */}
             <div className="bg-white rounded-2xl p-4 sm:p-6 warm-shadow border border-[#EFE7DA] space-y-4">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-[#EFE7DA] pb-3">
                 <div className="flex items-center gap-2">
