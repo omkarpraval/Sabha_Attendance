@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from app.database import engine, Base
-from app.routers import auth, users, venues, events, attendance, reports, notifications, analytics, health, admin, public
+from app.routers import auth, users, venues, events, attendance, reports, notifications, analytics, health, admin, public, finance, tasks
 
 from app.config import settings
 
@@ -143,6 +143,8 @@ app.include_router(analytics.router)
 app.include_router(health.router)
 app.include_router(admin.router)
 app.include_router(public.router)
+app.include_router(finance.router)
+app.include_router(tasks.router)
 
 @app.get("/")
 def read_root():

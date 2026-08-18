@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { QrCode, Flame, Calendar as CalendarIcon, CheckCircle2, Clock, MapPin, AlertCircle, Sparkles, Send, BarChart3, TrendingUp, Award, PieChart, Shield, Phone, PhoneCall, Mail, ChevronDown, Filter, Briefcase, GraduationCap, X } from 'lucide-react';
+import { QrCode, Flame, Calendar as CalendarIcon, CheckCircle2, Clock, MapPin, AlertCircle, Sparkles, Send, BarChart3, TrendingUp, Award, PieChart, Shield, Phone, PhoneCall, Mail, ChevronDown, Filter, Briefcase, GraduationCap, X, ClipboardList } from 'lucide-react';
 import { apiFetch } from '../api';
 import { saveOfflineScan } from '../utils/offlineQueue';
 import QRScannerModal from './QRScannerModal';
@@ -14,6 +14,7 @@ export default function UserPortal({ user, onUserUpdated }) {
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [leadership, setLeadership] = useState([]);
+  const [tasksMap, setTasksMap] = useState({});
   const [showScanner, setShowScanner] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const [scanError, setScanError] = useState(null);
@@ -56,6 +57,14 @@ export default function UserPortal({ user, onUserUpdated }) {
       // Fetch user's attendance history
       const hist = await apiFetch('/attendance/history');
       setHistory(hist);
+
+      // Fetch task duty roster
+      try {
+        const tasksRes = await apiFetch('/tasks/summary-all');
+        setTasksMap(tasksRes || {});
+      } catch (e) {
+        console.warn("Could not fetch tasks:", e);
+      }
 
       // Fetch Admins and Karyakars contact directory
       try {
@@ -290,6 +299,19 @@ export default function UserPortal({ user, onUserUpdated }) {
               <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-[#8B3A3A]" /> {activeEvent.venue_name || 'Central Sabha Mandir'}</span>
             </p>
           )}
+
+          {/* Assigned Duty / Sewa Badge for Logged In User */}
+          {(() => {
+            const evTasks = tasksMap[activeEvent?.id] || [];
+            const myDuty = evTasks.find(t => t.user_id === user?.id || (user?.name && t.person_name.toLowerCase() === user?.name.toLowerCase()));
+            if (!myDuty) return null;
+            return (
+              <div className="mt-2 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#8B3A3A]/10 border border-[#8B3A3A]/25 text-[#8B3A3A] text-xs font-bold shadow-2xs">
+                <ClipboardList className="w-4 h-4 text-[#8B3A3A]" />
+                <span>Your Assigned Sewa: <span className="underline">{myDuty.responsibility}</span> {myDuty.topic_notes ? `(${myDuty.topic_notes})` : ''}</span>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Primary Scan Button or Marked Attendance Status Card */}
@@ -632,6 +654,17 @@ export default function UserPortal({ user, onUserUpdated }) {
                 <p className="text-xs text-[#3A322C]/60 mt-0.5">
                   {ev.event_date} ({ev.start_time} - {ev.end_time} IST) • {ev.venue_name || 'Central Mandir'}
                 </p>
+                {(() => {
+                  const evTasks = tasksMap[ev.id] || [];
+                  const myDuty = evTasks.find(t => t.user_id === user?.id || (user?.name && t.person_name.toLowerCase() === user?.name.toLowerCase()));
+                  if (!myDuty) return null;
+                  return (
+                    <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#8B3A3A]/10 text-[#8B3A3A] text-[11px] font-semibold">
+                      <ClipboardList className="w-3 h-3 text-[#8B3A3A]" />
+                      <span>Assigned Duty: {myDuty.responsibility}</span>
+                    </div>
+                  );
+                })()}
               </div>
 
               <button

@@ -14,6 +14,10 @@ export default function UserManagementSection({ currentUser }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(25);
 
+  // Sorting state
+  const [sortField, setSortField] = useState('name');
+  const [sortDirection, setSortDirection] = useState('asc'); // 'asc' | 'desc'
+
   // Notification status
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -277,12 +281,17 @@ export default function UserManagementSection({ currentUser }) {
       return;
     }
 
+    const finalPassword = formData.password.trim() || formData.phone;
+
     setActionLoading(true);
 
     try {
       await apiFetch('/users', {
         method: 'POST',
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          ...formData,
+          password: finalPassword
+        })
       });
       setSuccess(`Successfully created member account for ${formData.name}!`);
       setIsAddModalOpen(false);
@@ -343,23 +352,76 @@ export default function UserManagementSection({ currentUser }) {
     }
   };
 
-  // Filtering
-  const filteredUsers = users.filter(u => {
-    const matchesSearch = 
-      (u.name && u.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (u.phone && u.phone.includes(searchQuery)) ||
-      (u.email && u.email.toLowerCase().includes(searchQuery.toLowerCase()));
+  // Filtering and Sorting
+  const filteredUsers = users
+    .filter(u => {
+      const matchesSearch = 
+        (u.name && u.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (u.phone && u.phone.includes(searchQuery)) ||
+        (u.email && u.email.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    const matchesRole = roleFilter === 'all' || u.role === roleFilter;
-    const matchesStatus = statusFilter === 'all' || u.status === statusFilter;
-    const userCat = (u.member_category || 'satsangi').toLowerCase();
-    const matchesCategory = categoryFilter === 'all' || 
-      (categoryFilter === 'b2y' ? ['b2y', 'bty'].includes(userCat) :
-       categoryFilter === 'gunbhavi' ? ['gunbhavi', 'goon_bhavi', 'bhavi'].includes(userCat) :
-       userCat === categoryFilter);
+      const matchesRole = roleFilter === 'all' || u.role === roleFilter;
+      const matchesStatus = statusFilter === 'all' || u.status === statusFilter;
+      const userCat = (u.member_category || 'satsangi').toLowerCase();
+      const matchesCategory = categoryFilter === 'all' || 
+        (categoryFilter === 'b2y' ? ['b2y', 'bty'].includes(userCat) :
+         categoryFilter === 'gunbhavi' ? ['gunbhavi', 'goon_bhavi', 'bhavi'].includes(userCat) :
+         userCat === categoryFilter);
 
-    return matchesSearch && matchesRole && matchesStatus && matchesCategory;
-  });
+      return matchesSearch && matchesRole && matchesStatus && matchesCategory;
+    })
+    .sort((a, b) => {
+      let res = 0;
+      if (sortField === 'name') {
+        res = (a.name || '').localeCompare(b.name || '');
+      } else if (sortField === 'phone') {
+        res = (a.phone || '').localeCompare(b.phone || '');
+      } else if (sortField === 'dob') {
+        res = (a.dob || '').localeCompare(b.dob || '');
+      } else if (sortField === 'category') {
+        res = (a.member_category || '').localeCompare(b.member_category || '');
+      } else if (sortField === 'role') {
+        res = (a.role || '').localeCompare(b.role || '');
+      } else if (sortField === 'streak') {
+        res = (a.current_streak || 0) - (b.current_streak || 0);
+        if (res === 0) res = (a.lifetime_count || 0) - (b.lifetime_count || 0);
+      }
+      return sortDirection === 'asc' ? res : -res;
+    });
+
+  const handleToggleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const renderSortHeader = (label, field, className = 'p-3') => {
+    const isActive = sortField === field;
+    return (
+      <th
+        onClick={() => handleToggleSort(field)}
+        className={`${className} cursor-pointer hover:bg-[#EFE7DA]/70 transition-colors select-none group`}
+        title={`Click to sort by ${label} (${isActive && sortDirection === 'asc' ? 'Descending' : 'Ascending'})`}
+      >
+        <div className="flex items-center gap-1.5">
+          <span className={isActive ? 'text-[#8B3A3A] font-extrabold' : 'text-[#8B3A3A]'}>
+            {label}
+          </span>
+          <div className="flex flex-col text-[7px] leading-[6px] transition-colors">
+            <span className={isActive && sortDirection === 'asc' ? 'text-[#8B3A3A] font-black' : 'text-[#3A322C]/30 group-hover:text-[#8B3A3A]/70'}>
+              ▲
+            </span>
+            <span className={isActive && sortDirection === 'desc' ? 'text-[#8B3A3A] font-black' : 'text-[#3A322C]/30 group-hover:text-[#8B3A3A]/70'}>
+              ▼
+            </span>
+          </div>
+        </div>
+      </th>
+    );
+  };
 
   return (
     <div className="bg-white rounded-2xl p-6 warm-shadow border border-[#EFE7DA] my-8 animate-in fade-in duration-200">
@@ -493,13 +555,13 @@ export default function UserManagementSection({ currentUser }) {
             <div className="overflow-x-auto border border-[#EFE7DA] rounded-xl">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="bg-[#FDFBF7] border-b border-[#EFE7DA] text-[#8B3A3A] font-semibold">
-                    <th className="p-3">MEMBER NAME</th>
-                    <th className="p-3">PHONE</th>
-                    <th className="p-3">DATE OF BIRTH</th>
-                    <th className="p-3">CATEGORY</th>
-                    <th className="p-3">ROLE</th>
-                    <th className="p-3">STREAK / TOTAL</th>
+                  <tr className="bg-[#FDFBF7] border-b border-[#EFE7DA] text-[#8B3A3A] font-semibold text-[11px] uppercase">
+                    {renderSortHeader('MEMBER NAME', 'name')}
+                    {renderSortHeader('PHONE', 'phone')}
+                    {renderSortHeader('DATE OF BIRTH', 'dob')}
+                    {renderSortHeader('CATEGORY', 'category')}
+                    {renderSortHeader('ROLE', 'role')}
+                    {renderSortHeader('STREAK / TOTAL', 'streak')}
                     <th className="p-3 text-right">ACTION</th>
                   </tr>
                 </thead>
@@ -711,7 +773,17 @@ export default function UserManagementSection({ currentUser }) {
                     required
                     maxLength={10}
                     value={formData.phone}
-                    onChange={(e) => setFormData({...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10)})}
+                    onChange={(e) => {
+                      const newPhone = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      setFormData(prev => {
+                        const shouldSync = !prev.password || prev.password === prev.phone;
+                        return {
+                          ...prev,
+                          phone: newPhone,
+                          password: shouldSync ? newPhone : prev.password
+                        };
+                      });
+                    }}
                     placeholder="10-digit number"
                     className="w-full px-3 py-2 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-xs text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
                   />
@@ -865,24 +937,30 @@ export default function UserManagementSection({ currentUser }) {
               </div>
 
               <div>
-                <label className="block font-semibold text-[#3A322C] mb-1">Initial Password (to share with member)</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-semibold text-[#3A322C]">Initial Password (to share with member)</label>
+                  <span className="text-[10px] text-[#8B3A3A] font-semibold">Defaults to Phone Number</span>
+                </div>
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
                     value={formData.password}
                     onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    placeholder="Set password for account"
+                    placeholder="Defaults to Mobile Phone number"
                     className="w-full pl-3 pr-9 py-2 rounded-xl border border-[#EFE7DA] bg-[#FDFBF7] text-xs text-[#3A322C] focus:outline-none focus:border-[#E8A33D]"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-2 text-[#3A322C]/40 hover:text-[#8B3A3A]"
+                    className="absolute right-3 top-2 text-[#3A322C]/40 hover:text-[#8B3A3A] cursor-pointer"
                   >
                     {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   </button>
                 </div>
+                <p className="text-[10px] text-[#3A322C]/60 mt-1">
+                  Automatically set to member's phone number. You can change it if needed.
+                </p>
               </div>
 
               <div className="pt-3 flex gap-2">

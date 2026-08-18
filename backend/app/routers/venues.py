@@ -12,6 +12,7 @@ from app.database import get_db
 from app.models import Venue, Event
 from app.schemas import VenueCreate, VenueResponse
 from app.auth import get_current_user, require_admin, require_karyakar_or_admin
+from app.utils.qr import generate_qr_base64
 
 router = APIRouter(prefix="/api/venues", tags=["Venues"])
 
@@ -137,6 +138,37 @@ def get_venue(
     if not venue:
         raise HTTPException(status_code=404, detail="Venue not found")
     return venue
+
+@router.get("/{venue_id}/qr")
+def get_venue_qr(
+    venue_id: int,
+    current_user = Depends(require_karyakar_or_admin),
+    db: Session = Depends(get_db)
+):
+    """Returns the permanent QR code image and reference for a venue."""
+    venue = db.query(Venue).filter(Venue.id == venue_id).first()
+    if not venue:
+        raise HTTPException(status_code=404, detail="Venue not found")
+
+    qr_ref = venue.qr_code_reference
+    if not qr_ref:
+        raise HTTPException(status_code=400, detail="This venue has no QR code reference set.")
+
+    # Build the scan URL for this venue's QR code
+    scan_url = f"https://sabha-attendance.vercel.app/scan?qr_ref={qr_ref}"
+    qr_image_base64 = generate_qr_base64(scan_url)
+
+    return {
+        "venue_id": venue.id,
+        "venue_name": venue.name,
+        "venue_address": venue.address or "",
+        "qr_code_reference": qr_ref,
+        "qr_image_base64": qr_image_base64,
+        "scan_url": scan_url,
+        "latitude": venue.latitude,
+        "longitude": venue.longitude,
+        "radius_meters": venue.radius_meters,
+    }
 
 @router.put("/{venue_id}", response_model=VenueResponse)
 def update_venue(

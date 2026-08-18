@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
-from app.models import Event, Attendance, MarkingMethod, User, UserStatus
+from app.models import Event, Attendance, MarkingMethod, User, UserStatus, EventTask
 from app.auth import require_karyakar_or_admin
 from app.utils.reports import generate_excel_report, generate_pdf_report
 
@@ -22,7 +22,9 @@ def fetch_grouped_event_reports(
     query = db.query(Event).options(
         joinedload(Event.venue),
         joinedload(Event.attendances).joinedload(Attendance.user),
-        joinedload(Event.attendances).joinedload(Attendance.marked_by_user)
+        joinedload(Event.attendances).joinedload(Attendance.marked_by_user),
+        joinedload(Event.finances),
+        joinedload(Event.tasks).joinedload(EventTask.user)
     )
 
     if event_id:
@@ -34,6 +36,7 @@ def fetch_grouped_event_reports(
             query = query.filter(Event.event_date <= end_date)
 
     events = query.order_by(Event.event_date.desc(), Event.start_time.desc()).all()
+    total_approved_members = db.query(User).filter(User.status == UserStatus.APPROVED).count()
 
     grouped = []
     for ev in events:
@@ -60,13 +63,25 @@ def fetch_grouped_event_reports(
                 "status": st,
                 "marked_by_name": marked_by,
                 "marking_method": r.marking_method.value if hasattr(r.marking_method, 'value') else str(r.marking_method),
-                "distance_meters": f"{r.distance_meters:.1f}" if r.distance_meters is not None else "N/A",
                 "timestamp_utc": ts_str
             })
 
         venue_name = ev.venue.name if ev.venue else "Central Sabha Mandir"
-        total = len(records)
+        total = total_approved_members if total_approved_members > 0 else (len(records) or 1)
         pct = round((present_count / total * 100)) if total > 0 else 0
+
+        total_expenses = sum(f.amount for f in ev.finances if f.transaction_type == "expense")
+        total_sewa = sum(f.amount for f in ev.finances if f.transaction_type == "sewa_contribution")
+
+        tasks_list = [
+            {
+                "person_name": t.person_name,
+                "person_phone": t.user.phone if t.user else "",
+                "responsibility": t.responsibility,
+                "topic_notes": t.topic_notes or ""
+            }
+            for t in (ev.tasks or [])
+        ]
 
         grouped.append({
             "event_id": ev.id,
@@ -79,6 +94,10 @@ def fetch_grouped_event_reports(
             "present_count": present_count,
             "absent_count": absent_count,
             "turnout_pct": pct,
+            "total_expenses": total_expenses,
+            "total_sewa": total_sewa,
+            "net_finance_balance": total_sewa - total_expenses,
+            "tasks": tasks_list,
             "records": records
         })
 

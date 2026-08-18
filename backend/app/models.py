@@ -103,6 +103,8 @@ class Event(Base):
     venue = relationship("Venue", back_populates="events")
     created_by = relationship("User")
     attendances = relationship("Attendance", back_populates="event")
+    finances = relationship("EventFinance", back_populates="event", cascade="all, delete-orphan")
+    tasks = relationship("EventTask", back_populates="event", cascade="all, delete-orphan")
 
 class Attendance(Base):
     __tablename__ = "attendances"
@@ -152,3 +154,39 @@ class PushSubscription(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     user = relationship("User")
+
+class EventFinance(Base):
+    __tablename__ = "event_finances"
+
+    id = Column(Integer, primary_key=True, index=True)
+    event_id = Column(Integer, ForeignKey("events.id"), index=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=True)
+    person_name = Column(String, nullable=False)
+    amount = Column(Float, nullable=False)
+    purpose = Column(String, nullable=False)
+    transaction_type = Column(String, default="expense", nullable=False)  # 'expense' | 'sewa_contribution'
+    payment_method = Column(String, default="cash", nullable=False)        # 'cash' | 'upi' | 'bank_transfer' | 'other'
+    notes = Column(Text, nullable=True)
+    created_by_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    event = relationship("Event", back_populates="finances")
+    user = relationship("User", foreign_keys=[user_id])
+    created_by = relationship("User", foreign_keys=[created_by_id])
+
+class EventTask(Base):
+    __tablename__ = "event_tasks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    event_id = Column(Integer, ForeignKey("events.id"), index=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=True)
+    person_name = Column(String, nullable=False)
+    responsibility = Column(String, nullable=False)  # e.g. Pravachan, Anchor, Kirtan, Prasang Katha, Audio, Prasad
+    topic_notes = Column(Text, nullable=True)        # e.g. Vachanamrut G-1, Swamini Vato, etc.
+    created_by_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    event = relationship("Event", back_populates="tasks")
+    user = relationship("User", foreign_keys=[user_id])
+    created_by = relationship("User", foreign_keys=[created_by_id])
+

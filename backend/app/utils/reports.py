@@ -38,7 +38,7 @@ def generate_excel_report(events_grouped: List[dict]) -> bytes:
     current_row = 1
 
     # Main Document Banner
-    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=7)
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=6)
     cell = ws.cell(row=1, column=1, value="BAPS SABHA ATTENDANCE OFFICIAL REPORT")
     cell.font = title_font
     cell.alignment = Alignment(horizontal="center", vertical="center")
@@ -46,28 +46,64 @@ def generate_excel_report(events_grouped: List[dict]) -> bytes:
 
     for ev in events_grouped:
         # Event Header Box
-        ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=7)
+        ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=6)
         c_title = ws.cell(row=current_row, column=1, value=f"EVENT: {ev['event_title']}")
         c_title.font = event_title_font
         c_title.fill = PatternFill(start_color="FDFBF7", end_color="FDFBF7", fill_type="solid")
         current_row += 1
 
         # Event Meta Row (Location & Date)
-        ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=7)
+        ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=6)
         meta_text = f"Date: {ev['event_date']} ({ev['start_time']} - {ev['end_time']} IST)   |   Location / Venue: {ev['venue_name']}"
         c_meta = ws.cell(row=current_row, column=1, value=meta_text)
         c_meta.font = meta_font
         current_row += 1
 
         # Turnout Metrics Row
-        ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=7)
+        ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=6)
         summary_text = f"Total Headcount: {ev['total_headcount']}   |   Present: {ev['present_count']}   |   Absent: {ev['absent_count']}   |   Turnout: {ev['turnout_pct']}%"
+        if ev.get('total_expenses', 0) > 0 or ev.get('total_sewa', 0) > 0:
+            summary_text += f"   |   Expenses: Rs {ev.get('total_expenses', 0):,.0f}   |   Sewa: Rs {ev.get('total_sewa', 0):,.0f}"
         c_sum = ws.cell(row=current_row, column=1, value=summary_text)
         c_sum.font = subtitle_font
         current_row += 1
 
-        # Table Column Headers
-        headers = ["Member Name", "Phone Number", "Status", "Marked By", "Method", "Distance (m)", "Timestamp (UTC)"]
+        # Duties / Tasks Roster Section (if assigned)
+        if ev.get('tasks'):
+            ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=6)
+            c_task_head = ws.cell(row=current_row, column=1, value="ASSIGNED DUTIES & SEWA ROSTER")
+            c_task_head.font = Font(name="Arial", size=10, bold=True, color="8B3A3A")
+            c_task_head.fill = PatternFill(start_color="FDFBF7", end_color="FDFBF7", fill_type="solid")
+            current_row += 1
+
+            # Task Table Headers
+            task_headers = ["Duty / Responsibility", "Assigned Person", "Contact Phone", "Topic / Notes & Requirements"]
+            ws.cell(row=current_row, column=1, value=task_headers[0]).font = Font(name="Arial", size=9, bold=True, color="3A322C")
+            ws.cell(row=current_row, column=2, value=task_headers[1]).font = Font(name="Arial", size=9, bold=True, color="3A322C")
+            ws.cell(row=current_row, column=3, value=task_headers[2]).font = Font(name="Arial", size=9, bold=True, color="3A322C")
+            ws.merge_cells(start_row=current_row, start_column=4, end_row=current_row, end_column=6)
+            ws.cell(row=current_row, column=4, value=task_headers[3]).font = Font(name="Arial", size=9, bold=True, color="3A322C")
+            for col_idx in range(1, 7):
+                c = ws.cell(row=current_row, column=col_idx)
+                c.fill = PatternFill(start_color="EFE7DA", end_color="EFE7DA", fill_type="solid")
+                c.border = border
+            current_row += 1
+
+            # Task Rows
+            for t in ev['tasks']:
+                ws.cell(row=current_row, column=1, value=t.get("responsibility", "")).font = Font(name="Arial", size=9, bold=True, color="8B3A3A")
+                ws.cell(row=current_row, column=2, value=t.get("person_name", "")).font = Font(name="Arial", size=9, color="3A322C")
+                ws.cell(row=current_row, column=3, value=t.get("person_phone", "-")).font = Font(name="Arial", size=9, color="555555")
+                ws.merge_cells(start_row=current_row, start_column=4, end_row=current_row, end_column=6)
+                ws.cell(row=current_row, column=4, value=t.get("topic_notes") or "-").font = Font(name="Arial", size=9, italic=True, color="555555")
+                for col_idx in range(1, 7):
+                    ws.cell(row=current_row, column=col_idx).border = border
+                current_row += 1
+
+            current_row += 1
+
+        # Table Column Headers (without Distance)
+        headers = ["Member Name", "Phone Number", "Status", "Marked By", "Method", "Timestamp (IST)"]
         for col_idx, h in enumerate(headers, 1):
             c_h = ws.cell(row=current_row, column=col_idx, value=h)
             c_h.font = header_font
@@ -77,7 +113,7 @@ def generate_excel_report(events_grouped: List[dict]) -> bytes:
 
         # Attendance Table Rows for this event
         if not ev["records"]:
-            ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=7)
+            ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=6)
             c_empty = ws.cell(row=current_row, column=1, value="No attendance records logged for this event.")
             c_empty.font = Font(name="Arial", size=10, italic=True)
             current_row += 1
@@ -90,11 +126,10 @@ def generate_excel_report(events_grouped: List[dict]) -> bytes:
                     status_str,
                     r.get("marked_by_name", ""),
                     r.get("marking_method", "").replace("_", " ").title(),
-                    r.get("distance_meters", "N/A"),
                     r.get("timestamp_utc", "")
                 ])
                 
-                for col_idx in range(1, 8):
+                for col_idx in range(1, 7):
                     c = ws.cell(row=current_row, column=col_idx)
                     c.border = border
                     c.alignment = Alignment(vertical="center")
@@ -125,27 +160,30 @@ def generate_excel_report(events_grouped: List[dict]) -> bytes:
 
 def generate_pdf_report(events_grouped: List[dict], title_suffix: str = "") -> bytes:
     """
-    Generates an event-grouped PDF report with Event Name, Location, and Date at the top of each event.
+    Generates an event-grouped PDF report with Event Name, Location, Date, and Duties Roster table at the top of each event.
     """
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
     story = []
-
     styles = getSampleStyleSheet()
+
     doc_title_style = ParagraphStyle(
         'DocTitle',
         parent=styles['Heading1'],
         fontName='Helvetica-Bold',
         fontSize=18,
         textColor=colors.HexColor('#8B3A3A'),
+        alignment=1,
         spaceAfter=4
     )
+
     doc_sub_style = ParagraphStyle(
         'DocSub',
         parent=styles['Normal'],
-        fontName='Helvetica',
+        fontName='Helvetica-Bold',
         fontSize=10,
         textColor=colors.HexColor('#3A322C'),
+        alignment=1,
         spaceAfter=15
     )
 
@@ -155,16 +193,26 @@ def generate_pdf_report(events_grouped: List[dict], title_suffix: str = "") -> b
         fontName='Helvetica-Bold',
         fontSize=13,
         textColor=colors.HexColor('#8B3A3A'),
+        spaceAfter=2
+    )
+
+    ev_section_label_style = ParagraphStyle(
+        'EvSectionLabel',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=9,
+        textColor=colors.HexColor('#8B3A3A'),
+        spaceBefore=4,
         spaceAfter=3
     )
 
     ev_meta_style = ParagraphStyle(
         'EvMeta',
         parent=styles['Normal'],
-        fontName='Helvetica-Bold',
+        fontName='Helvetica-Oblique',
         fontSize=9,
-        textColor=colors.HexColor('#3A322C'),
-        spaceAfter=4
+        textColor=colors.HexColor('#555555'),
+        spaceAfter=2
     )
 
     ev_metrics_style = ParagraphStyle(
@@ -173,7 +221,7 @@ def generate_pdf_report(events_grouped: List[dict], title_suffix: str = "") -> b
         fontName='Helvetica',
         fontSize=9,
         textColor=colors.HexColor('#5B8C5B'),
-        spaceAfter=8
+        spaceAfter=6
     )
 
     story.append(Paragraph("Sabha Attendance Official Summary Report", doc_title_style))
@@ -182,18 +230,53 @@ def generate_pdf_report(events_grouped: List[dict], title_suffix: str = "") -> b
 
     for idx, ev in enumerate(events_grouped):
         if idx > 0:
-            story.append(Spacer(1, 15))
+            story.append(PageBreak())
 
         # Event Name, Location, Date at the top of each event
         story.append(Paragraph(f"Event: {ev['event_title']}", ev_title_style))
         story.append(Paragraph(f"Date: {ev['event_date']} ({ev['start_time']} - {ev['end_time']} IST)   |   Location / Venue: {ev['venue_name']}", ev_meta_style))
-        story.append(Paragraph(f"Total Headcount: <b>{ev['total_headcount']}</b>   |   Present: <b>{ev['present_count']}</b>   |   Absent: <b>{ev['absent_count']}</b>   (Turnout: {ev['turnout_pct']}%)", ev_metrics_style))
+        
+        metrics_line = f"Total Headcount: <b>{ev['total_headcount']}</b>   |   Present: <b>{ev['present_count']}</b>   |   Absent: <b>{ev['absent_count']}</b>   (Turnout: {ev['turnout_pct']}%)"
+        if ev.get('total_expenses', 0) > 0 or ev.get('total_sewa', 0) > 0:
+            metrics_line += f"   |   <b>Finance:</b> Spent Rs {ev.get('total_expenses', 0):,.0f} / Sewa Rs {ev.get('total_sewa', 0):,.0f}"
+        story.append(Paragraph(metrics_line, ev_metrics_style))
 
-        # Table data
-        table_data = [["Member Name", "Phone Number", "Status", "Marked By", "Time Stamp", "Distance (m)"]]
+        # Duties & Sewa Roster Table (if duties exist)
+        if ev.get('tasks'):
+            story.append(Paragraph("Assigned Duties & Sewa Roster:", ev_section_label_style))
+            task_table_data = [["Duty / Responsibility", "Assigned Person", "Contact Phone", "Topic / Notes & Details"]]
+            for t in ev['tasks']:
+                task_table_data.append([
+                    t.get('responsibility', ''),
+                    t.get('person_name', ''),
+                    t.get('person_phone') or '-',
+                    t.get('topic_notes') or '-'
+                ])
+            
+            task_tbl = Table(task_table_data, colWidths=[130, 120, 95, 190])
+            task_tbl.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#EFE7DA')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#8B3A3A')),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 8.5),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 4),
+                ('TOPPADDING', (0, 0), (-1, 0), 4),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#D3D3D3')),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 8),
+                ('TEXTCOLOR', (0, 1), (0, -1), colors.HexColor('#8B3A3A')),
+            ]))
+            story.append(task_tbl)
+            story.append(Spacer(1, 6))
+
+        story.append(Paragraph("Attendance Records:", ev_section_label_style))
+
+        # Table data (without Distance)
+        table_data = [["Member Name", "Phone Number", "Status", "Marked By", "Time Stamp (IST)"]]
         
         if not ev["records"]:
-            table_data.append(["No records logged for this event", "-", "-", "-", "-", "-"])
+            table_data.append(["No records logged for this event", "-", "-", "-", "-"])
         else:
             for r in ev["records"]:
                 table_data.append([
@@ -201,11 +284,10 @@ def generate_pdf_report(events_grouped: List[dict], title_suffix: str = "") -> b
                     r.get("user_phone", ""),
                     r.get("status", "").upper(),
                     r.get("marked_by_name", ""),
-                    r.get("timestamp_utc", "-"),
-                    r.get("distance_meters", "N/A")
+                    r.get("timestamp_utc", "-")
                 ])
 
-        t = Table(table_data, colWidths=[120, 80, 55, 110, 100, 60])
+        t = Table(table_data, colWidths=[130, 95, 65, 130, 115])
         t.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#8B3A3A')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -222,6 +304,7 @@ def generate_pdf_report(events_grouped: List[dict], title_suffix: str = "") -> b
 
     doc.build(story)
     return buffer.getvalue()
+
 
 
 def generate_qr_poster_pdf(
