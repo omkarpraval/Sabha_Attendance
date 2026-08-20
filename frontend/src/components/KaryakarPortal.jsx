@@ -18,6 +18,10 @@ export default function KaryakarPortal({ user, onUserUpdated }) {
   const [showSelfScanner, setShowSelfScanner] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
+  // Sorting state
+  const [sortField, setSortField] = useState('name');
+  const [sortDirection, setSortDirection] = useState('asc'); // 'asc' | 'desc'
+
   useEffect(() => {
     loadEventsAndUsers();
   }, []);
@@ -159,10 +163,65 @@ export default function KaryakarPortal({ user, onUserUpdated }) {
     }
   };
 
-  const filteredUsers = users.filter(u =>
-    u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.phone.includes(searchQuery)
-  );
+  const filteredUsers = users
+    .filter(u =>
+      u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.phone.includes(searchQuery)
+    )
+    .sort((a, b) => {
+      let res = 0;
+      if (sortField === 'name') {
+        res = (a.name || '').localeCompare(b.name || '');
+      } else if (sortField === 'phone') {
+        res = (a.phone || '').localeCompare(b.phone || '');
+      } else if (sortField === 'streak') {
+        res = (a.current_streak || 0) - (b.current_streak || 0);
+        if (res === 0) res = (a.lifetime_count || 0) - (b.lifetime_count || 0);
+      } else if (sortField === 'status') {
+        const recordA = attendanceMap[a.id];
+        const recordB = attendanceMap[b.id];
+        const statusWeight = { present: 1, absent: 2, excused: 3, undefined: 4 };
+        const wA = statusWeight[recordA?.status] ?? 4;
+        const wB = statusWeight[recordB?.status] ?? 4;
+        res = wA - wB;
+        if (res === 0) res = (a.name || '').localeCompare(b.name || '');
+      }
+      return sortDirection === 'asc' ? res : -res;
+    });
+
+  const handleToggleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const renderSortHeader = (label, field, className = 'p-3') => {
+    const isActive = sortField === field;
+    return (
+      <th
+        onClick={() => handleToggleSort(field)}
+        className={`${className} cursor-pointer hover:bg-[#EFE7DA]/70 transition-colors select-none group`}
+        title={`Click to sort by ${label} (${isActive && sortDirection === 'asc' ? 'Descending' : 'Ascending'})`}
+      >
+        <div className="flex items-center gap-1.5">
+          <span className={isActive ? 'text-[#8B3A3A] font-extrabold' : 'text-[#8B3A3A]'}>
+            {label}
+          </span>
+          <div className="flex flex-col text-[7px] leading-[6px] transition-colors">
+            <span className={isActive && sortDirection === 'asc' ? 'text-[#8B3A3A] font-black' : 'text-[#3A322C]/30 group-hover:text-[#8B3A3A]/70'}>
+              ▲
+            </span>
+            <span className={isActive && sortDirection === 'desc' ? 'text-[#8B3A3A] font-black' : 'text-[#3A322C]/30 group-hover:text-[#8B3A3A]/70'}>
+              ▼
+            </span>
+          </div>
+        </div>
+      </th>
+    );
+  };
 
   const totalPresentCount = Object.values(attendanceMap).filter(a => a.status === 'present').length;
 
@@ -337,10 +396,10 @@ export default function KaryakarPortal({ user, onUserUpdated }) {
               <table className="w-full text-left text-xs text-[#3A322C]">
                 <thead>
                   <tr className="bg-[#FDFBF7] border-b border-[#EFE7DA] text-[#8B3A3A] uppercase font-bold text-[11px] tracking-wider">
-                    <th className="p-3 rounded-l-xl">Member Name</th>
-                    <th className="p-3">Phone</th>
-                    <th className="p-3">Streak / Total</th>
-                    <th className="p-3">Event Status</th>
+                    {renderSortHeader('Member Name', 'name', 'p-3 rounded-l-xl')}
+                    {renderSortHeader('Phone', 'phone')}
+                    {renderSortHeader('Streak / Total', 'streak')}
+                    {renderSortHeader('Event Status', 'status')}
                     <th className="p-3 text-right rounded-r-xl">Manual Action</th>
                   </tr>
                 </thead>

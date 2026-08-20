@@ -48,20 +48,46 @@ def scan_and_mark_attendance(
     """
     clean_ref = extract_clean_qr_ref(req.qr_code_reference)
 
-    # 1. Resolve QR code reference to an active event
-    event = db.query(Event).filter(
+    # 1. Resolve QR code reference to active event(s)
+    ist_now = get_current_ist_time()
+    today_str = ist_now.strftime("%Y-%m-%d")
+    current_time = ist_now.strftime("%H:%M")
+
+    matching_events = db.query(Event).filter(
         Event.qr_code_reference == clean_ref,
         Event.status == EventStatus.OPEN
-    ).first()
+    ).all()
 
-    # If reusable QR, look up active event linked to venue
-    if not event:
-        venue = db.query(Venue).filter(Venue.qr_code_reference == clean_ref).first()
-        if venue:
-            event = db.query(Event).filter(
-                Event.venue_id == venue.id,
+    # 2. Fallback: look up venue by QR ref and find its open events
+    if not matching_events:
+        venue_by_qr = db.query(Venue).filter(Venue.qr_code_reference == clean_ref).first()
+        if venue_by_qr:
+            matching_events = db.query(Event).filter(
+                Event.venue_id == venue_by_qr.id,
                 Event.status == EventStatus.OPEN
-            ).order_by(Event.event_date.desc()).first()
+            ).all()
+
+    # 3. Pick the best event: today's event whose time window matches now
+    event = None
+    for ev in matching_events:
+        if ev.event_date == today_str and ev.start_time <= current_time <= ev.end_time:
+            event = ev
+            break
+
+    # Fallback: any today's open event at this venue
+    if not event:
+        for ev in matching_events:
+            if ev.event_date == today_str:
+                event = ev
+                break
+
+    # Last fallback: nearest future open event
+    if not event and matching_events:
+        future = [ev for ev in matching_events if ev.event_date >= today_str]
+        if future:
+            event = sorted(future, key=lambda e: (e.event_date, e.start_time))[0]
+        else:
+            event = sorted(matching_events, key=lambda e: (e.event_date, e.start_time), reverse=True)[0]
 
     if not event:
         raise HTTPException(

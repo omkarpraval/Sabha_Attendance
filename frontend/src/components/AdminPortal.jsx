@@ -3,7 +3,8 @@ import {
   Shield, Users, MapPin, Calendar, QrCode, FileSpreadsheet, FileText,
   UserCheck, UserX, Plus, CheckCircle2, AlertCircle, Edit, History,
   Lock, RefreshCw, Download, Layers, Award, Trash2, ChevronDown, Filter, X, Sparkles, Clock, Link2, Search, User, Check, XCircle, Printer,
-  Flame, TrendingUp, Activity, BarChart3, PieChart, Zap, BellRing, Cake, Phone, UserPlus, Mail, Briefcase, GraduationCap
+  Flame, TrendingUp, Activity, BarChart3, PieChart, Zap, BellRing, Cake, Phone, UserPlus, Mail, Briefcase, GraduationCap,
+  IndianRupee, Wallet, Receipt, ClipboardList
 } from 'lucide-react';
 import { apiFetch } from '../api';
 import VenueMap from './VenueMap';
@@ -435,6 +436,130 @@ export default function AdminPortal({ user, onUserUpdated }) {
   const [showSelfScanner, setShowSelfScanner] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
 
+  // Live Attendance Audit Modal Sorting State
+  const [modalSortField, setModalSortField] = useState('name');
+  const [modalSortDirection, setModalSortDirection] = useState('asc'); // 'asc' | 'desc'
+
+  // Member Detail History Modal Sorting State
+  const [userModalSortField, setUserModalSortField] = useState('date');
+  const [userModalSortDirection, setUserModalSortDirection] = useState('desc'); // 'asc' | 'desc'
+
+  // Event Finance State
+  const [selectedFinanceEvent, setSelectedFinanceEvent] = useState(null);
+  const [financeSummaryMap, setFinanceSummaryMap] = useState({});
+  const [eventFinanceData, setEventFinanceData] = useState({
+    total_expense: 0,
+    total_sewa: 0,
+    net_balance: 0,
+    item_count: 0,
+    items: []
+  });
+  const [financeForm, setFinanceForm] = useState({
+    user_id: '',
+    person_name: '',
+    amount: '',
+    purpose: 'Prasad',
+    transaction_type: 'expense',
+    payment_method: 'cash',
+    notes: ''
+  });
+  const [isCustomPerson, setIsCustomPerson] = useState(false);
+  const [financeLoading, setFinanceLoading] = useState(false);
+  const [financeSubmitting, setFinanceSubmitting] = useState(false);
+
+  // Searchable Person Dropdown State for Finance
+  const [personSearchQuery, setPersonSearchQuery] = useState('');
+  const [isPersonDropdownOpen, setIsPersonDropdownOpen] = useState(false);
+
+  // Finance Table Sorting State
+  const [financeSortField, setFinanceSortField] = useState('date');
+  const [financeSortDirection, setFinanceSortDirection] = useState('desc'); // 'asc' | 'desc'
+
+  // Event Tasks & Duty Roster State
+  const [selectedTaskEvent, setSelectedTaskEvent] = useState(null);
+  const [taskSummaryMap, setTaskSummaryMap] = useState({});
+  const [eventTasksData, setEventTasksData] = useState({
+    event_id: null,
+    item_count: 0,
+    items: []
+  });
+  const [taskForm, setTaskForm] = useState({
+    user_id: '',
+    person_name: '',
+    responsibility: 'Pravachan',
+    topic_notes: ''
+  });
+  const [isCustomTaskPerson, setIsCustomTaskPerson] = useState(false);
+  const [taskPersonSearchQuery, setTaskPersonSearchQuery] = useState('');
+  const [isTaskPersonDropdownOpen, setIsTaskPersonDropdownOpen] = useState(false);
+
+  // Duty Roster Chips with Persistence
+  const defaultDuties = ['Pravachan', 'Anchor / Sanchalan', 'Kirtan', 'Prasang Katha', 'Audio / Mic Sewa', 'Prasad Sewa', 'Gate Welcome', 'Stage Decor'];
+  const [dutyChips, setDutyChips] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sabha_duty_chips');
+      return saved ? JSON.parse(saved) : defaultDuties;
+    } catch {
+      return defaultDuties;
+    }
+  });
+  const [newDutyInput, setNewDutyInput] = useState('');
+  const [showAddDutyInput, setShowAddDutyInput] = useState(false);
+
+  // Duty Sorting State
+  const [taskSortField, setTaskSortField] = useState('date');
+  const [taskSortDirection, setTaskSortDirection] = useState('asc'); // 'asc' | 'desc'
+  const [taskLoading, setTaskLoading] = useState(false);
+  const [taskSubmitting, setTaskSubmitting] = useState(false);
+
+  // Purpose Chips State with Persistence
+  const defaultPurposes = ['Prasad', 'Hall Rent', 'Sound & Mic', 'Flowers', 'Stationery', 'Travel'];
+  const [purposeChips, setPurposeChips] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sabha_purpose_chips');
+      return saved ? JSON.parse(saved) : defaultPurposes;
+    } catch {
+      return defaultPurposes;
+    }
+  });
+  const [newPurposeInput, setNewPurposeInput] = useState('');
+  const [showAddPurposeInput, setShowAddPurposeInput] = useState(false);
+
+  const handleAddPurposeChip = () => {
+    const trimmed = newPurposeInput.trim();
+    if (!trimmed) return;
+    if (purposeChips.includes(trimmed)) {
+      setFinanceForm(prev => ({ ...prev, purpose: trimmed }));
+      setNewPurposeInput('');
+      setShowAddPurposeInput(false);
+      return;
+    }
+    const updated = [...purposeChips, trimmed];
+    setPurposeChips(updated);
+    try {
+      localStorage.setItem('sabha_purpose_chips', JSON.stringify(updated));
+    } catch (e) {
+      console.error(e);
+    }
+    setFinanceForm(prev => ({ ...prev, purpose: trimmed }));
+    setNewPurposeInput('');
+    setShowAddPurposeInput(false);
+  };
+
+  const handleDeletePurposeChip = (e, tagToDelete) => {
+    e.stopPropagation();
+    const updated = purposeChips.filter(t => t !== tagToDelete);
+    setPurposeChips(updated);
+    try {
+      localStorage.setItem('sabha_purpose_chips', JSON.stringify(updated));
+    } catch (e) {
+      console.error(e);
+    }
+    if (financeForm.purpose === tagToDelete) {
+      setFinanceForm(prev => ({ ...prev, purpose: updated[0] || 'General Expense' }));
+    }
+  };
+
   useEffect(() => {
     loadAdminData();
   }, []);
@@ -460,6 +585,10 @@ export default function AdminPortal({ user, onUserUpdated }) {
       if (analyticsRes) setAnalyticsData(analyticsRes);
       setAdminBirthdayData(bdayRes || { today_birthdays: [], upcoming_birthdays: [] });
 
+      // Load all event finance and task summaries
+      loadFinanceSummaryAll();
+      loadTaskSummaryAll();
+
       if (venList.length > 0 && !eventForm.venue_id) {
         setEventForm(prev => ({ ...prev, venue_id: venList[0].id }));
       }
@@ -467,6 +596,195 @@ export default function AdminPortal({ user, onUserUpdated }) {
       console.error("Admin data load error:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadTaskSummaryAll = async () => {
+    try {
+      const data = await apiFetch('/tasks/summary-all');
+      setTaskSummaryMap(data || {});
+    } catch (err) {
+      console.error("Error loading tasks summary:", err);
+    }
+  };
+
+  const handleOpenEventTasks = async (event) => {
+    setSelectedTaskEvent(event);
+    setIsCustomTaskPerson(false);
+    setTaskPersonSearchQuery('');
+    setIsTaskPersonDropdownOpen(false);
+    setTaskForm({
+      user_id: '',
+      person_name: '',
+      responsibility: dutyChips[0] || 'Pravachan',
+      topic_notes: ''
+    });
+    setTaskLoading(true);
+    try {
+      const data = await apiFetch(`/events/${event.id}/tasks`);
+      setEventTasksData(data || { event_id: event.id, item_count: 0, items: [] });
+    } catch (err) {
+      console.error("Error loading event tasks:", err);
+    } finally {
+      setTaskLoading(false);
+    }
+  };
+
+  const handleAddTaskEntry = async (e) => {
+    e.preventDefault();
+    if (!selectedTaskEvent) return;
+    if (!taskForm.person_name && !taskForm.user_id) {
+      alert("Please select a person or enter a person name.");
+      return;
+    }
+    if (!taskForm.responsibility.trim()) {
+      alert("Please specify a duty / responsibility.");
+      return;
+    }
+
+    setTaskSubmitting(true);
+    try {
+      await apiFetch(`/events/${selectedTaskEvent.id}/tasks`, {
+        method: 'POST',
+        body: JSON.stringify(taskForm)
+      });
+      const data = await apiFetch(`/events/${selectedTaskEvent.id}/tasks`);
+      setEventTasksData(data);
+      loadTaskSummaryAll();
+      setTaskForm(prev => ({
+        ...prev,
+        topic_notes: ''
+      }));
+    } catch (err) {
+      alert(err.message || "Failed to assign duty.");
+    } finally {
+      setTaskSubmitting(false);
+    }
+  };
+
+  const handleDeleteTaskEntry = async (taskId) => {
+    if (!confirm("Are you sure you want to remove this duty assignment?")) return;
+    try {
+      await apiFetch(`/tasks/${taskId}`, { method: 'DELETE' });
+      const data = await apiFetch(`/events/${selectedTaskEvent.id}/tasks`);
+      setEventTasksData(data);
+      loadTaskSummaryAll();
+    } catch (err) {
+      alert(err.message || "Failed to remove duty assignment.");
+    }
+  };
+
+  const handleAddDutyChip = () => {
+    const trimmed = newDutyInput.trim();
+    if (!trimmed) return;
+    if (dutyChips.includes(trimmed)) {
+      setTaskForm(prev => ({ ...prev, responsibility: trimmed }));
+      setNewDutyInput('');
+      setShowAddDutyInput(false);
+      return;
+    }
+    const updated = [...dutyChips, trimmed];
+    setDutyChips(updated);
+    try {
+      localStorage.setItem('sabha_duty_chips', JSON.stringify(updated));
+    } catch (e) { console.error(e); }
+    setTaskForm(prev => ({ ...prev, responsibility: trimmed }));
+    setNewDutyInput('');
+    setShowAddDutyInput(false);
+  };
+
+  const handleDeleteDutyChip = (e, tagToDelete) => {
+    e.stopPropagation();
+    const updated = dutyChips.filter(t => t !== tagToDelete);
+    setDutyChips(updated);
+    try {
+      localStorage.setItem('sabha_duty_chips', JSON.stringify(updated));
+    } catch (e) { console.error(e); }
+    if (taskForm.responsibility === tagToDelete) {
+      setTaskForm(prev => ({ ...prev, responsibility: updated[0] || 'General Sewa' }));
+    }
+  };
+
+  const loadFinanceSummaryAll = async () => {
+    try {
+      const data = await apiFetch('/finances/summary-all');
+      setFinanceSummaryMap(data || {});
+    } catch (err) {
+      console.error("Error loading all finance summary:", err);
+    }
+  };
+
+  const handleOpenEventFinance = async (event) => {
+    setSelectedFinanceEvent(event);
+    setIsCustomPerson(false);
+    setPersonSearchQuery('');
+    setIsPersonDropdownOpen(false);
+    setFinanceForm({
+      user_id: '',
+      person_name: '',
+      amount: '',
+      purpose: 'Prasad',
+      transaction_type: 'expense',
+      payment_method: 'cash',
+      notes: ''
+    });
+    setFinanceLoading(true);
+    try {
+      const data = await apiFetch(`/events/${event.id}/finances`);
+      setEventFinanceData(data || { total_expense: 0, total_sewa: 0, net_balance: 0, item_count: 0, items: [] });
+    } catch (err) {
+      console.error("Error loading event finances:", err);
+    } finally {
+      setFinanceLoading(false);
+    }
+  };
+
+  const handleAddFinanceEntry = async (e) => {
+    e.preventDefault();
+    if (!selectedFinanceEvent) return;
+    const numAmount = parseFloat(financeForm.amount);
+    if (!numAmount || numAmount <= 0) {
+      alert("Please enter a valid amount in rupees.");
+      return;
+    }
+    if (!financeForm.person_name && !financeForm.user_id) {
+      alert("Please select a person or enter a person name.");
+      return;
+    }
+
+    setFinanceSubmitting(true);
+    try {
+      await apiFetch(`/events/${selectedFinanceEvent.id}/finances`, {
+        method: 'POST',
+        body: JSON.stringify({
+          ...financeForm,
+          amount: numAmount
+        })
+      });
+      const data = await apiFetch(`/events/${selectedFinanceEvent.id}/finances`);
+      setEventFinanceData(data);
+      loadFinanceSummaryAll();
+      setFinanceForm(prev => ({
+        ...prev,
+        amount: '',
+        notes: ''
+      }));
+    } catch (err) {
+      alert(err.message || "Failed to add finance entry.");
+    } finally {
+      setFinanceSubmitting(false);
+    }
+  };
+
+  const handleDeleteFinanceEntry = async (financeId) => {
+    if (!confirm("Are you sure you want to delete this finance record?")) return;
+    try {
+      await apiFetch(`/finances/${financeId}`, { method: 'DELETE' });
+      const data = await apiFetch(`/events/${selectedFinanceEvent.id}/finances`);
+      setEventFinanceData(data);
+      loadFinanceSummaryAll();
+    } catch (err) {
+      alert(err.message || "Failed to delete finance record.");
     }
   };
 
@@ -838,6 +1156,24 @@ export default function AdminPortal({ user, onUserUpdated }) {
     } catch (err) { alert(err.message); }
   };
 
+  // Venue QR Display — shows the permanent venue QR code
+  const handleViewVenueQR = async (venueId) => {
+    try {
+      const data = await apiFetch(`/venues/${venueId}/qr`);
+      // Map to the same shape as event QR modal data
+      setQrModalData({
+        event_title: data.venue_name,
+        event_date: data.venue_address ? `🏛️ ${data.venue_address}` : '🏛️ Venue QR Code',
+        start_time: null,
+        qr_code_reference: data.qr_code_reference,
+        qr_image_base64: data.qr_image_base64,
+        scan_url: data.scan_url,
+        venue_name: data.venue_name,
+        venue_radius: data.radius_meters,
+      });
+    } catch (err) { alert('Could not load venue QR: ' + err.message); }
+  };
+
   // Attendance Edit & Audit
   const handleOpenEditAttendance = async (record) => {
     setEditingAttendance(record);
@@ -924,7 +1260,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
     const records = attendanceRecords.filter(r => r.event_id === eventId);
     const present = records.filter(r => r.status === 'present').length;
     const absent = records.filter(r => r.status === 'absent').length;
-    const total = records.length || allUsers.length;
+    const total = allUsers.length > 0 ? allUsers.length : (records.length || 1);
     const pct = total > 0 ? Math.round((present / total) * 100) : 0;
     return { records, present, absent, total, pct };
   };
@@ -1301,7 +1637,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
                   </p>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+                <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full md:w-auto">
                   {liveState.isLive && (
                     <button
                       onClick={() => setSelectedDetailModal({ type: 'event', data: activeEvent })}
@@ -1310,6 +1646,22 @@ export default function AdminPortal({ user, onUserUpdated }) {
                       <UserCheck className="w-4 h-4" /> Live Attendance & Override
                     </button>
                   )}
+
+                  <button
+                    onClick={() => handleOpenEventTasks(activeEvent)}
+                    className="bg-[#8B3A3A] hover:bg-[#722F2F] text-white font-semibold text-xs px-3.5 py-2.5 rounded-xl shadow-xs flex items-center justify-center gap-1.5 cursor-pointer w-full sm:w-auto"
+                    title="Assign & Manage Duties / Tasks (Pravachan, Anchor, Kirtan, etc.)"
+                  >
+                    <ClipboardList className="w-4 h-4" /> Duties & Sewa
+                  </button>
+
+                  <button
+                    onClick={() => handleOpenEventFinance(activeEvent)}
+                    className="bg-[#E8A33D] hover:bg-[#D98A2B] text-white font-semibold text-xs px-3.5 py-2.5 rounded-xl shadow-xs flex items-center justify-center gap-1.5 cursor-pointer w-full sm:w-auto"
+                    title="Manage Event Finances & Expenses"
+                  >
+                    <IndianRupee className="w-4 h-4" /> Finances
+                  </button>
 
                   {!liveState.isClosed && (
                     <button
@@ -1739,6 +2091,20 @@ export default function AdminPortal({ user, onUserUpdated }) {
                       className="bg-[#5B8C5B] hover:bg-[#4A734A] text-white font-semibold text-xs py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-md flex-1 md:flex-none"
                     >
                       <UserCheck className="w-4 h-4" /> Live Attendance
+                    </button>
+                    <button
+                      onClick={() => handleOpenEventTasks(primaryLiveEvent)}
+                      className="bg-[#8B3A3A] hover:bg-[#722F2F] text-white font-semibold text-xs py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-md flex-1 md:flex-none"
+                      title="Assign & Manage Duties / Tasks (Pravachan, Anchor, Kirtan, etc.)"
+                    >
+                      <ClipboardList className="w-4 h-4" /> Duties & Sewa
+                    </button>
+                    <button
+                      onClick={() => handleOpenEventFinance(primaryLiveEvent)}
+                      className="bg-[#E8A33D] hover:bg-[#D98A2B] text-white font-semibold text-xs py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-md flex-1 md:flex-none"
+                      title="Manage Event Finances"
+                    >
+                      <IndianRupee className="w-4 h-4" /> Finances
                     </button>
                     <button
                       onClick={() => handleViewQR(primaryLiveEvent.id)}
@@ -2209,6 +2575,14 @@ export default function AdminPortal({ user, onUserUpdated }) {
                     <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0 mt-1 sm:mt-0">
                       <button
                         type="button"
+                        onClick={() => handleViewVenueQR(v.id)}
+                        className="bg-[#E8A33D]/10 hover:bg-[#E8A33D]/20 text-[#D98A2B] border border-[#E8A33D]/40 text-xs font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                        title="View & Download QR Code for this venue"
+                      >
+                        <QrCode className="w-3 h-3" /> Show QR
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => handleStartEditVenue(v)}
                         className="bg-white hover:bg-[#EFE7DA] text-[#8B3A3A] border border-[#EFE7DA] text-xs font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
                       >
@@ -2497,6 +2871,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
                           </div>
                         </div>
 
+                        {/* Turnout Ratio */}
                         <div>
                           <div className="flex justify-between text-[11px] font-medium text-[#3A322C]/70 mb-1">
                             <span>Turnout Ratio</span>
@@ -2510,22 +2885,72 @@ export default function AdminPortal({ user, onUserUpdated }) {
                           </div>
                         </div>
 
+                        {/* Finance & Duties Summary Badges on Event Card if present */}
+                        <div className="space-y-1">
+                          {financeSummaryMap[ev.id]?.item_count > 0 && (
+                            <div className="flex items-center justify-between text-[11px] font-semibold px-2.5 py-1 rounded-xl bg-[#E8A33D]/10 border border-[#E8A33D]/25 text-[#8B3A3A]">
+                              <span className="flex items-center gap-1">
+                                <IndianRupee className="w-3 h-3 text-[#E8A33D]" />
+                                <span>Finances:</span>
+                              </span>
+                              <span>
+                                ₹{financeSummaryMap[ev.id].total_expense.toLocaleString('en-IN')} spent
+                                {financeSummaryMap[ev.id].total_sewa > 0 && (
+                                  <span className="text-[#5B8C5B] ml-1">
+                                    (+₹{financeSummaryMap[ev.id].total_sewa.toLocaleString('en-IN')})
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                          )}
+
+                          {taskSummaryMap[ev.id]?.length > 0 && (
+                            <div className="flex items-center justify-between text-[11px] font-semibold px-2.5 py-1 rounded-xl bg-[#8B3A3A]/5 border border-[#8B3A3A]/20 text-[#8B3A3A]">
+                              <span className="flex items-center gap-1">
+                                <ClipboardList className="w-3 h-3 text-[#8B3A3A]" />
+                                <span>Duties ({taskSummaryMap[ev.id].length}):</span>
+                              </span>
+                              <span className="truncate max-w-[150px] font-normal text-[10px] text-[#3A322C]/80">
+                                {taskSummaryMap[ev.id].map(t => `${t.responsibility}: ${t.person_name}`).join(', ')}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
                         {/* Export & Detail Action Buttons */}
                         <div className="pt-2 border-t border-[#EFE7DA] space-y-1.5">
-                          <div className="grid grid-cols-2 gap-1.5">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                             <button
                               type="button"
                               onClick={() => handleExportEventPDF(ev.id, ev.title, ev.event_date)}
-                              className="bg-[#8B3A3A] hover:bg-[#6E2C2C] text-white font-semibold text-xs py-1.5 px-2 rounded-lg flex items-center justify-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                              className="bg-[#8B3A3A] hover:bg-[#6E2C2C] text-white font-semibold text-xs py-1.5 px-1.5 rounded-lg flex items-center justify-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                              title="Export PDF Report"
                             >
                               <FileText className="w-3.5 h-3.5" /> PDF
                             </button>
                             <button
                               type="button"
                               onClick={() => handleExportEventExcel(ev.id, ev.title, ev.event_date)}
-                              className="bg-[#5B8C5B] hover:bg-[#4A734A] text-white font-semibold text-xs py-1.5 px-2 rounded-lg flex items-center justify-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                              className="bg-[#5B8C5B] hover:bg-[#4A734A] text-white font-semibold text-xs py-1.5 px-1.5 rounded-lg flex items-center justify-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                              title="Export Excel Spreadsheet"
                             >
                               <FileSpreadsheet className="w-3.5 h-3.5" /> Excel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEventFinance(ev)}
+                              className="bg-[#E8A33D] hover:bg-[#D98A2B] text-white font-semibold text-xs py-1.5 px-1.5 rounded-lg flex items-center justify-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                              title="Manage Event Finances & Expenses"
+                            >
+                              <IndianRupee className="w-3.5 h-3.5" /> Finance
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEventTasks(ev)}
+                              className="bg-[#3A322C] hover:bg-[#251F1A] text-white font-semibold text-xs py-1.5 px-1.5 rounded-lg flex items-center justify-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                              title="Assign & Manage Duties (Pravachan, Anchor, Kirtan, etc.)"
+                            >
+                              <ClipboardList className="w-3.5 h-3.5" /> Duties
                             </button>
                           </div>
                           <button
@@ -2723,7 +3148,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
                     <button
                       type="button"
                       onClick={() => handleExportEventPDF(selectedDetailModal.data.id, selectedDetailModal.data.title, selectedDetailModal.data.event_date)}
@@ -2737,6 +3162,22 @@ export default function AdminPortal({ user, onUserUpdated }) {
                       className="bg-[#5B8C5B] hover:bg-[#4A734A] text-white font-semibold text-xs px-3 py-2 rounded-xl flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
                     >
                       <FileSpreadsheet className="w-3.5 h-3.5" /> Excel Report
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEventTasks(selectedDetailModal.data)}
+                      className="bg-[#3A322C] hover:bg-[#251F1A] text-white font-semibold text-xs px-3 py-2 rounded-xl flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+                      title="Manage Event Duties & Tasks"
+                    >
+                      <ClipboardList className="w-3.5 h-3.5" /> Duties
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEventFinance(selectedDetailModal.data)}
+                      className="bg-[#E8A33D] hover:bg-[#D98A2B] text-white font-semibold text-xs px-3 py-2 rounded-xl flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+                      title="Manage Event Finances & Expenses"
+                    >
+                      <IndianRupee className="w-3.5 h-3.5" /> Finance
                     </button>
                     <button
                       type="button"
@@ -2764,20 +3205,123 @@ export default function AdminPortal({ user, onUserUpdated }) {
                   const evRecordMap = {};
                   evRecords.forEach(r => { evRecordMap[r.user_id] = r; });
 
+                  const sortedModalUsers = allUsers
+                    .filter(u =>
+                      u.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+                      u.phone.includes(userSearchQuery)
+                    )
+                    .sort((a, b) => {
+                      const rA = evRecordMap[a.id];
+                      const rB = evRecordMap[b.id];
+
+                      let res = 0;
+                      if (modalSortField === 'name') {
+                        res = (a.name || '').localeCompare(b.name || '');
+                        if (res === 0) res = (a.phone || '').localeCompare(b.phone || '');
+                      } else if (modalSortField === 'status') {
+                        const statusWeight = { present: 1, absent: 2, excused: 3, undefined: 4 };
+                        const wA = statusWeight[rA?.status] ?? 4;
+                        const wB = statusWeight[rB?.status] ?? 4;
+                        res = wA - wB;
+                        if (res === 0) res = (a.name || '').localeCompare(b.name || '');
+                      } else if (modalSortField === 'timestamp') {
+                        const getTimestamp = (r) => {
+                          if (!r?.timestamp_utc) return 0;
+                          const tsStr = String(r.timestamp_utc);
+                          const isoStr = tsStr.endsWith('Z') || tsStr.includes('+') ? tsStr : tsStr + 'Z';
+                          const d = new Date(isoStr);
+                          return isNaN(d.getTime()) ? 0 : d.getTime();
+                        };
+                        const tA = getTimestamp(rA);
+                        const tB = getTimestamp(rB);
+                        res = tA - tB;
+                        if (res === 0) res = (a.name || '').localeCompare(b.name || '');
+                      } else if (modalSortField === 'marked_by') {
+                        const mA = rA?.marked_by_name || (rA ? 'Self QR / Auto' : '');
+                        const mB = rB?.marked_by_name || (rB ? 'Self QR / Auto' : '');
+                        res = mA.localeCompare(mB);
+                        if (res === 0) res = (a.name || '').localeCompare(b.name || '');
+                      }
+
+                      return modalSortDirection === 'asc' ? res : -res;
+                    });
+
+                  const handleToggleModalSort = (field) => {
+                    if (modalSortField === field) {
+                      setModalSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+                    } else {
+                      setModalSortField(field);
+                      setModalSortDirection('asc');
+                    }
+                  };
+
+                  const renderSortHeader = (label, field, className = 'p-3') => {
+                    const isActive = modalSortField === field;
+                    return (
+                      <th
+                        onClick={() => handleToggleModalSort(field)}
+                        className={`${className} cursor-pointer hover:bg-[#EFE7DA]/70 transition-colors select-none group`}
+                        title={`Click to sort by ${label} (${isActive && modalSortDirection === 'asc' ? 'Descending' : 'Ascending'})`}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span className={isActive ? 'text-[#8B3A3A] font-extrabold' : 'text-[#8B3A3A]'}>
+                            {label}
+                          </span>
+                          <div className="flex flex-col text-[7px] leading-[6px] transition-colors">
+                            <span className={isActive && modalSortDirection === 'asc' ? 'text-[#8B3A3A] font-black' : 'text-[#3A322C]/30 group-hover:text-[#8B3A3A]/70'}>
+                              ▲
+                            </span>
+                            <span className={isActive && modalSortDirection === 'desc' ? 'text-[#8B3A3A] font-black' : 'text-[#3A322C]/30 group-hover:text-[#8B3A3A]/70'}>
+                              ▼
+                            </span>
+                          </div>
+                        </div>
+                      </th>
+                    );
+                  };
+
                   return (
                     <div className="space-y-4">
-                      <div className="grid grid-cols-3 gap-3 my-2 p-3.5 bg-[#FDFBF7] rounded-xl border border-[#EFE7DA] text-center text-xs font-semibold">
-                        <div>
+                      {/* Top Metrics Row: Attendance & Overall Event Finance Overview */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 my-2 text-center text-xs font-semibold">
+                        <div className="p-2.5 bg-[#FDFBF7] rounded-xl border border-[#EFE7DA]">
                           <div className="text-[10px] text-[#3A322C]/60 uppercase">Total Headcount</div>
-                          <div className="text-lg font-bold text-[#3A322C]">{allUsers.length}</div>
+                          <div className="text-base font-bold text-[#3A322C] mt-0.5">{allUsers.length}</div>
                         </div>
-                        <div>
+                        <div className="p-2.5 bg-[#5B8C5B]/10 rounded-xl border border-[#5B8C5B]/20">
                           <div className="text-[10px] text-[#5B8C5B] uppercase">Present Members</div>
-                          <div className="text-lg font-bold text-[#5B8C5B]">{evStats.present}</div>
+                          <div className="text-base font-bold text-[#5B8C5B] mt-0.5">{evStats.present}</div>
                         </div>
-                        <div>
+                        <div className="p-2.5 bg-[#C1554A]/10 rounded-xl border border-[#C1554A]/20">
                           <div className="text-[10px] text-[#C1554A] uppercase">Absent / Excused</div>
-                          <div className="text-lg font-bold text-[#C1554A]">{evStats.absent}</div>
+                          <div className="text-base font-bold text-[#C1554A] mt-0.5">{evStats.absent}</div>
+                        </div>
+                        <div className="p-2.5 bg-[#C1554A]/10 rounded-xl border border-[#C1554A]/20">
+                          <div className="text-[10px] text-[#C1554A] uppercase">Total Expenses</div>
+                          <div className="text-base font-bold text-[#C1554A] mt-0.5">
+                            ₹{(financeSummaryMap[selectedDetailModal.data.id]?.total_expense || 0).toLocaleString('en-IN')}
+                          </div>
+                        </div>
+                        <div className="p-2.5 bg-[#5B8C5B]/10 rounded-xl border border-[#5B8C5B]/20">
+                          <div className="text-[10px] text-[#5B8C5B] uppercase">Total Sewa</div>
+                          <div className="text-base font-bold text-[#5B8C5B] mt-0.5">
+                            ₹{(financeSummaryMap[selectedDetailModal.data.id]?.total_sewa || 0).toLocaleString('en-IN')}
+                          </div>
+                        </div>
+                        <div
+                          className="p-2.5 bg-[#E8A33D]/10 rounded-xl border border-[#E8A33D]/25 cursor-pointer hover:bg-[#E8A33D]/20 transition-colors group"
+                          onClick={() => handleOpenEventFinance(selectedDetailModal.data)}
+                          title="Click to view & manage event finances"
+                        >
+                          <div className="text-[10px] text-[#8B3A3A] uppercase flex items-center justify-center gap-0.5">
+                            <span>Net Balance</span>
+                            <span className="text-[9px] text-[#E8A33D] group-hover:underline">⚙</span>
+                          </div>
+                          <div className={`text-base font-bold mt-0.5 ${
+                            (financeSummaryMap[selectedDetailModal.data.id]?.net_balance || 0) >= 0 ? 'text-[#5B8C5B]' : 'text-[#C1554A]'
+                          }`}>
+                            {(financeSummaryMap[selectedDetailModal.data.id]?.net_balance || 0) >= 0 ? '+' : ''}₹{(financeSummaryMap[selectedDetailModal.data.id]?.net_balance || 0).toLocaleString('en-IN')}
+                          </div>
                         </div>
                       </div>
 
@@ -2801,28 +3345,22 @@ export default function AdminPortal({ user, onUserUpdated }) {
                         <table className="w-full text-left text-xs text-[#3A322C]">
                           <thead className="sticky top-0 bg-[#FDFBF7] z-10 border-b border-[#EFE7DA] text-[#8B3A3A] uppercase font-bold text-[11px]">
                             <tr>
-                              <th className="p-3">Member Name & Phone</th>
-                              <th className="p-3">Status</th>
-                              <th className="p-3">Time Stamp</th>
-                              <th className="p-3">Marked By</th>
+                              {renderSortHeader('Member Name & Phone', 'name')}
+                              {renderSortHeader('Status', 'status')}
+                              {renderSortHeader('Time Stamp', 'timestamp')}
+                              {renderSortHeader('Marked By', 'marked_by')}
                               <th className="p-3 text-right">Live Action</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-[#EFE7DA]">
-                            {allUsers.filter(u =>
-                              u.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-                              u.phone.includes(userSearchQuery)
-                            ).length === 0 ? (
+                            {sortedModalUsers.length === 0 ? (
                               <tr>
                                 <td colSpan="5" className="p-6 text-center text-[#3A322C]/60 italic">
                                   No members match your search criteria.
                                 </td>
                               </tr>
                             ) : (
-                              allUsers.filter(u =>
-                                u.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-                                u.phone.includes(userSearchQuery)
-                              ).map((u) => {
+                              sortedModalUsers.map((u) => {
                                 const r = evRecordMap[u.id];
                                 const isPresent = r?.status === 'present';
                                 const isAbsent = r?.status === 'absent';
@@ -2953,67 +3491,988 @@ export default function AdminPortal({ user, onUserUpdated }) {
                   );
                 })()}
 
-                <div className="overflow-x-auto border border-[#EFE7DA] rounded-xl">
-                  <table className="w-full text-left text-xs text-[#3A322C]">
-                    <thead>
-                      <tr className="bg-[#FDFBF7] border-b border-[#EFE7DA] text-[#8B3A3A] uppercase font-bold text-[11px]">
-                        <th className="p-3">Sabha Event / Date</th>
-                        <th className="p-3">Status</th>
-                        <th className="p-3">Time Stamp</th>
-                        <th className="p-3">Marked By</th>
-                        <th className="p-3">Method</th>
-                        <th className="p-3 text-right">Audit Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#EFE7DA]">
-                      {attendanceRecords.filter(r => r.user_id === selectedDetailModal.data.id).length === 0 ? (
-                        <tr>
-                          <td colSpan="6" className="p-6 text-center text-[#3A322C]/60 italic">
-                            No attendance history recorded for this member.
-                          </td>
-                        </tr>
-                      ) : (
-                        attendanceRecords.filter(r => r.user_id === selectedDetailModal.data.id).map((r) => (
-                          <tr key={r.id} className="hover:bg-[#FDFBF7]/60">
-                            <td className="p-3 font-semibold">
-                              {r.event_title}
-                              <div className="text-[10px] text-[#3A322C]/60">{r.event_date}</div>
-                            </td>
-                            <td className="p-3">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                                r.status === 'present' ? 'bg-[#5B8C5B]/15 text-[#5B8C5B]' :
-                                r.status === 'absent' ? 'bg-[#C1554A]/15 text-[#C1554A]' : 'bg-[#D9B166]/20 text-[#D9B166]'
-                              }`}>
-                                {r.status}
-                              </span>
-                            </td>
-                            <td className="p-3 font-mono text-[11px] text-[#8B3A3A] font-medium">
-                              {r.timestamp_utc ? (
-                                new Date(String(r.timestamp_utc).endsWith('Z') || String(r.timestamp_utc).includes('+') ? r.timestamp_utc : String(r.timestamp_utc) + 'Z').toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) + ' IST'
-                              ) : (
-                                <span className="text-[#3A322C]/40">-</span>
-                              )}
-                            </td>
-                            <td className="p-3 font-semibold text-[#8B3A3A]">
-                              {r.marked_by_name ? `Marked by ${r.marked_by_name}` : (r.marking_method === 'self_qr' ? 'Self (QR)' : 'Auto Absent')}
-                            </td>
-                            <td className="p-3 text-[#3A322C]/70 capitalize">{r.marking_method.replace('_', ' ')}</td>
-                            <td className="p-3 text-right">
-                              <button
-                                onClick={() => handleOpenEditAttendance(r)}
-                                className="bg-[#FDFBF7] hover:bg-[#EFE7DA] text-[#8B3A3A] border border-[#EFE7DA] text-xs font-semibold px-2.5 py-1 rounded-lg cursor-pointer"
-                              >
-                                Edit Record
-                              </button>
-                            </td>
+                {(() => {
+                  const userRecords = attendanceRecords
+                    .filter(r => r.user_id === selectedDetailModal.data.id)
+                    .sort((a, b) => {
+                      let res = 0;
+                      if (userModalSortField === 'date') {
+                        res = (a.event_date || '').localeCompare(b.event_date || '');
+                        if (res === 0) res = (a.event_title || '').localeCompare(b.event_title || '');
+                      } else if (userModalSortField === 'status') {
+                        res = (a.status || '').localeCompare(b.status || '');
+                      } else if (userModalSortField === 'timestamp') {
+                        const getTimestamp = (r) => {
+                          if (!r?.timestamp_utc) return 0;
+                          const tsStr = String(r.timestamp_utc);
+                          const isoStr = tsStr.endsWith('Z') || tsStr.includes('+') ? tsStr : tsStr + 'Z';
+                          const d = new Date(isoStr);
+                          return isNaN(d.getTime()) ? 0 : d.getTime();
+                        };
+                        res = getTimestamp(a) - getTimestamp(b);
+                      } else if (userModalSortField === 'marked_by') {
+                        const mA = a.marked_by_name || (a.marking_method === 'self_qr' ? 'Self (QR)' : 'Auto Absent');
+                        const mB = b.marked_by_name || (b.marking_method === 'self_qr' ? 'Self (QR)' : 'Auto Absent');
+                        res = mA.localeCompare(mB);
+                      } else if (userModalSortField === 'method') {
+                        res = (a.marking_method || '').localeCompare(b.marking_method || '');
+                      }
+                      return userModalSortDirection === 'asc' ? res : -res;
+                    });
+
+                  const handleToggleUserModalSort = (field) => {
+                    if (userModalSortField === field) {
+                      setUserModalSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+                    } else {
+                      setUserModalSortField(field);
+                      setUserModalSortDirection('asc');
+                    }
+                  };
+
+                  const renderUserSortHeader = (label, field, className = 'p-3') => {
+                    const isActive = userModalSortField === field;
+                    return (
+                      <th
+                        onClick={() => handleToggleUserModalSort(field)}
+                        className={`${className} cursor-pointer hover:bg-[#EFE7DA]/70 transition-colors select-none group`}
+                        title={`Click to sort by ${label} (${isActive && userModalSortDirection === 'asc' ? 'Descending' : 'Ascending'})`}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span className={isActive ? 'text-[#8B3A3A] font-extrabold' : 'text-[#8B3A3A]'}>
+                            {label}
+                          </span>
+                          <div className="flex flex-col text-[7px] leading-[6px] transition-colors">
+                            <span className={isActive && userModalSortDirection === 'asc' ? 'text-[#8B3A3A] font-black' : 'text-[#3A322C]/30 group-hover:text-[#8B3A3A]/70'}>
+                              ▲
+                            </span>
+                            <span className={isActive && userModalSortDirection === 'desc' ? 'text-[#8B3A3A] font-black' : 'text-[#3A322C]/30 group-hover:text-[#8B3A3A]/70'}>
+                              ▼
+                            </span>
+                          </div>
+                        </div>
+                      </th>
+                    );
+                  };
+
+                  return (
+                    <div className="overflow-x-auto border border-[#EFE7DA] rounded-xl">
+                      <table className="w-full text-left text-xs text-[#3A322C]">
+                        <thead>
+                          <tr className="bg-[#FDFBF7] border-b border-[#EFE7DA] text-[#8B3A3A] uppercase font-bold text-[11px]">
+                            {renderUserSortHeader('Sabha Event / Date', 'date')}
+                            {renderUserSortHeader('Status', 'status')}
+                            {renderUserSortHeader('Time Stamp', 'timestamp')}
+                            {renderUserSortHeader('Marked By', 'marked_by')}
+                            {renderUserSortHeader('Method', 'method')}
+                            <th className="p-3 text-right">Audit Action</th>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                        </thead>
+                        <tbody className="divide-y divide-[#EFE7DA]">
+                          {userRecords.length === 0 ? (
+                            <tr>
+                              <td colSpan="6" className="p-6 text-center text-[#3A322C]/60 italic">
+                                No attendance history recorded for this member.
+                              </td>
+                            </tr>
+                          ) : (
+                            userRecords.map((r) => (
+                              <tr key={r.id} className="hover:bg-[#FDFBF7]/60">
+                                <td className="p-3 font-semibold">
+                                  {r.event_title}
+                                  <div className="text-[10px] text-[#3A322C]/60">{r.event_date}</div>
+                                </td>
+                                <td className="p-3">
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                    r.status === 'present' ? 'bg-[#5B8C5B]/15 text-[#5B8C5B]' :
+                                    r.status === 'absent' ? 'bg-[#C1554A]/15 text-[#C1554A]' : 'bg-[#D9B166]/20 text-[#D9B166]'
+                                  }`}>
+                                    {r.status}
+                                  </span>
+                                </td>
+                                <td className="p-3 font-mono text-[11px] text-[#8B3A3A] font-medium">
+                                  {r.timestamp_utc ? (
+                                    new Date(String(r.timestamp_utc).endsWith('Z') || String(r.timestamp_utc).includes('+') ? r.timestamp_utc : String(r.timestamp_utc) + 'Z').toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) + ' IST'
+                                  ) : (
+                                    <span className="text-[#3A322C]/40">-</span>
+                                  )}
+                                </td>
+                                <td className="p-3 font-semibold text-[#8B3A3A]">
+                                  {r.marked_by_name ? `Marked by ${r.marked_by_name}` : (r.marking_method === 'self_qr' ? 'Self (QR)' : 'Auto Absent')}
+                                </td>
+                                <td className="p-3 text-[#3A322C]/70 capitalize">{r.marking_method.replace('_', ' ')}</td>
+                                <td className="p-3 text-right">
+                                  <button
+                                    onClick={() => handleOpenEditAttendance(r)}
+                                    className="bg-[#FDFBF7] hover:bg-[#EFE7DA] text-[#8B3A3A] border border-[#EFE7DA] text-xs font-semibold px-2.5 py-1 rounded-lg cursor-pointer"
+                                  >
+                                    Edit Record
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })()}
               </div>
             )}
+
+          </div>
+        </div>
+      )}
+
+      {/* EVENT FINANCE MANAGEMENT MODAL */}
+      {selectedFinanceEvent && (
+        <div className="fixed inset-0 z-50 bg-[#3A322C]/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-4 sm:p-6 warm-shadow border border-[#EFE7DA] space-y-5 relative max-h-[92vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+            
+            {/* Modal Header */}
+            <div className="flex items-start justify-between pb-3 border-b border-[#EFE7DA]">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#E8A33D] bg-[#E8A33D]/10 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                  <IndianRupee className="w-3 h-3" /> Event Finance Ledger
+                </span>
+                <h3 className="font-serif-accent text-xl font-bold text-[#8B3A3A] mt-1">
+                  {selectedFinanceEvent.title}
+                </h3>
+                <p className="text-xs text-[#3A322C]/70">
+                  {selectedFinanceEvent.event_date} ({selectedFinanceEvent.start_time} - {selectedFinanceEvent.end_time} IST) · {selectedFinanceEvent.venue_name || 'Central Mandir'}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedFinanceEvent(null)}
+                className="p-1 text-[#3A322C]/40 hover:text-[#8B3A3A] cursor-pointer rounded-lg hover:bg-[#FDFBF7]"
+                title="Close Window"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Financial Summary Cards */}
+            <div className="grid grid-cols-3 gap-2.5 text-center text-xs font-semibold">
+              <div className="p-3 bg-[#C1554A]/10 rounded-xl border border-[#C1554A]/20">
+                <div className="text-[10px] text-[#C1554A] uppercase tracking-wider">Total Expenses</div>
+                <div className="text-base sm:text-lg font-bold text-[#C1554A] mt-0.5">
+                  ₹{eventFinanceData.total_expense.toLocaleString('en-IN')}
+                </div>
+              </div>
+              <div className="p-3 bg-[#5B8C5B]/10 rounded-xl border border-[#5B8C5B]/20">
+                <div className="text-[10px] text-[#5B8C5B] uppercase tracking-wider">Total Sewa (Income)</div>
+                <div className="text-base sm:text-lg font-bold text-[#5B8C5B] mt-0.5">
+                  ₹{eventFinanceData.total_sewa.toLocaleString('en-IN')}
+                </div>
+              </div>
+              <div className="p-3 bg-[#FDFBF7] rounded-xl border border-[#EFE7DA]">
+                <div className="text-[10px] text-[#3A322C]/60 uppercase tracking-wider">Net Balance</div>
+                <div className={`text-base sm:text-lg font-bold mt-0.5 ${eventFinanceData.net_balance >= 0 ? 'text-[#5B8C5B]' : 'text-[#C1554A]'}`}>
+                  {eventFinanceData.net_balance >= 0 ? '+' : ''}₹{eventFinanceData.net_balance.toLocaleString('en-IN')}
+                </div>
+              </div>
+            </div>
+
+            {/* Add Finance Transaction Form */}
+            <form onSubmit={handleAddFinanceEntry} className="p-4 bg-[#FDFBF7] rounded-2xl border border-[#EFE7DA] space-y-3.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[#8B3A3A] flex items-center gap-1.5">
+                  <Plus className="w-3.5 h-3.5" /> Add Transaction / Expense Entry
+                </span>
+
+                {/* Type Selector (Expense vs Sewa) */}
+                <div className="inline-flex rounded-lg p-0.5 bg-white border border-[#EFE7DA] text-xs font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => setFinanceForm(prev => ({ ...prev, transaction_type: 'expense' }))}
+                    className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+                      financeForm.transaction_type === 'expense'
+                        ? 'bg-[#C1554A] text-white shadow-2xs'
+                        : 'text-[#3A322C]/70 hover:text-[#C1554A]'
+                    }`}
+                  >
+                    Expense (Paid)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFinanceForm(prev => ({ ...prev, transaction_type: 'sewa_contribution' }))}
+                    className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+                      financeForm.transaction_type === 'sewa_contribution'
+                        ? 'bg-[#5B8C5B] text-white shadow-2xs'
+                        : 'text-[#3A322C]/70 hover:text-[#5B8C5B]'
+                    }`}
+                  >
+                    Sewa / Contribution
+                  </button>
+                </div>
+              </div>
+
+              {/* Person & Amount */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                {/* Person Selection */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-semibold text-[#3A322C]">Person / Contributor</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomPerson(!isCustomPerson);
+                        setFinanceForm(prev => ({ ...prev, user_id: '', person_name: '' }));
+                      }}
+                      className="text-[10px] text-[#8B3A3A] font-semibold hover:underline cursor-pointer"
+                    >
+                      {isCustomPerson ? '← Select Registered Member' : '+ Other Person'}
+                    </button>
+                  </div>
+
+                  {isCustomPerson ? (
+                    <input
+                      type="text"
+                      required
+                      value={financeForm.person_name}
+                      onChange={(e) => setFinanceForm(prev => ({ ...prev, person_name: e.target.value }))}
+                      placeholder="Enter external person's name..."
+                      className="w-full px-3 py-2 rounded-xl border border-[#EFE7DA] bg-white text-xs text-[#3A322C] focus:outline-none focus:border-[#8B3A3A]"
+                    />
+                  ) : (
+                    <div className="relative">
+                      {financeForm.user_id ? (
+                        <div className="flex items-center justify-between px-3 py-1.5 rounded-xl border border-[#8B3A3A]/40 bg-[#8B3A3A]/5 text-xs">
+                          <div className="flex items-center gap-1.5 truncate">
+                            <span className="font-bold text-[#8B3A3A]">{financeForm.person_name}</span>
+                            <span className="text-[11px] text-[#3A322C]/60 font-mono">
+                              ({allUsers.find(u => u.id === financeForm.user_id)?.phone || ''})
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFinanceForm(prev => ({ ...prev, user_id: '', person_name: '' }));
+                              setPersonSearchQuery('');
+                              setIsPersonDropdownOpen(true);
+                            }}
+                            className="p-1 text-[#8B3A3A] hover:bg-[#8B3A3A]/10 rounded-md cursor-pointer ml-1"
+                            title="Change Member"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="relative">
+                            <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-[#3A322C]/40" />
+                            <input
+                              type="text"
+                              value={personSearchQuery}
+                              onChange={(e) => {
+                                setPersonSearchQuery(e.target.value);
+                                setIsPersonDropdownOpen(true);
+                              }}
+                              onFocus={() => setIsPersonDropdownOpen(true)}
+                              placeholder="Search member by name or phone..."
+                              className="w-full pl-8 pr-3 py-2 rounded-xl border border-[#EFE7DA] bg-white text-xs text-[#3A322C] focus:outline-none focus:border-[#8B3A3A]"
+                            />
+                          </div>
+
+                          {isPersonDropdownOpen && (
+                            <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-[#EFE7DA] rounded-xl shadow-lg max-h-48 overflow-y-auto z-30 divide-y divide-[#EFE7DA]">
+                              {allUsers.filter(u =>
+                                !personSearchQuery ||
+                                (u.name && u.name.toLowerCase().includes(personSearchQuery.toLowerCase())) ||
+                                (u.phone && u.phone.includes(personSearchQuery))
+                              ).length === 0 ? (
+                                <div className="p-3 text-center text-xs text-[#3A322C]/50 italic">
+                                  No members match "{personSearchQuery}"
+                                </div>
+                              ) : (
+                                allUsers.filter(u =>
+                                  !personSearchQuery ||
+                                  (u.name && u.name.toLowerCase().includes(personSearchQuery.toLowerCase())) ||
+                                  (u.phone && u.phone.includes(personSearchQuery))
+                                ).map(u => (
+                                  <div
+                                    key={u.id}
+                                    onClick={() => {
+                                      setFinanceForm(prev => ({
+                                        ...prev,
+                                        user_id: u.id,
+                                        person_name: u.name
+                                      }));
+                                      setIsPersonDropdownOpen(false);
+                                      setPersonSearchQuery('');
+                                    }}
+                                    className="p-2.5 hover:bg-[#FDFBF7] cursor-pointer flex items-center justify-between text-xs transition-colors"
+                                  >
+                                    <div>
+                                      <div className="font-semibold text-[#3A322C]">{u.name}</div>
+                                      <div className="text-[10px] text-[#3A322C]/60 font-mono">{u.phone}</div>
+                                    </div>
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#EFE7DA] text-[#8B3A3A] font-semibold capitalize">
+                                      {u.role || 'Member'}
+                                    </span>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Amount in Rupees */}
+                <div>
+                  <label className="block font-semibold text-[#3A322C] mb-1">Amount in Rupees (₹)</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2 text-[#8B3A3A] font-bold text-sm">₹</span>
+                    <input
+                      type="number"
+                      min="1"
+                      step="any"
+                      required
+                      value={financeForm.amount}
+                      onChange={(e) => setFinanceForm(prev => ({ ...prev, amount: e.target.value }))}
+                      placeholder="0.00"
+                      className="w-full pl-7 pr-3 py-2 rounded-xl border border-[#EFE7DA] bg-white text-xs font-bold text-[#3A322C] focus:outline-none focus:border-[#8B3A3A]"
+                    />
+                  </div>
+                  {/* Quick Amount Chips */}
+                  <div className="flex gap-1.5 mt-1.5">
+                    {[100, 250, 500, 1000, 2000].map(val => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => setFinanceForm(prev => ({ ...prev, amount: String(val) }))}
+                        className="px-2 py-0.5 rounded-md bg-white border border-[#EFE7DA] text-[10px] font-semibold text-[#3A322C]/70 hover:bg-[#EFE7DA] cursor-pointer"
+                      >
+                        +₹{val}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Purpose & Payment Method */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-semibold text-[#3A322C]">Purpose / Item</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddPurposeInput(!showAddPurposeInput)}
+                      className="text-[10px] text-[#8B3A3A] font-semibold hover:underline cursor-pointer flex items-center gap-0.5"
+                    >
+                      <Plus className="w-3 h-3" /> Add Purpose Tag
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={financeForm.purpose}
+                    onChange={(e) => setFinanceForm(prev => ({ ...prev, purpose: e.target.value }))}
+                    placeholder="e.g. Prasad, Hall Rent, Sound"
+                    className="w-full px-3 py-2 rounded-xl border border-[#EFE7DA] bg-white text-xs text-[#3A322C] focus:outline-none focus:border-[#8B3A3A]"
+                  />
+
+                  {/* Inline Add Purpose Input */}
+                  {showAddPurposeInput && (
+                    <div className="flex items-center gap-1.5 mt-2 p-2 bg-white rounded-xl border border-[#EFE7DA]">
+                      <input
+                        type="text"
+                        value={newPurposeInput}
+                        onChange={(e) => setNewPurposeInput(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddPurposeChip(); } }}
+                        placeholder="Enter new purpose..."
+                        className="flex-1 px-2.5 py-1 text-xs border border-[#EFE7DA] rounded-lg focus:outline-none focus:border-[#8B3A3A]"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddPurposeChip}
+                        className="px-2.5 py-1 bg-[#8B3A3A] text-white rounded-lg text-xs font-semibold cursor-pointer"
+                      >
+                        Add
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setShowAddPurposeInput(false); setNewPurposeInput(''); }}
+                        className="p-1 text-[#3A322C]/50 hover:text-[#8B3A3A] cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Quick Purpose Chips with Delete Access */}
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {purposeChips.map(tag => (
+                      <span
+                        key={tag}
+                        onClick={() => setFinanceForm(prev => ({ ...prev, purpose: tag }))}
+                        className={`group/chip inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium border transition-all cursor-pointer ${
+                          financeForm.purpose === tag
+                            ? 'bg-[#8B3A3A] text-white border-[#8B3A3A]'
+                            : 'bg-white border-[#EFE7DA] text-[#8B3A3A] hover:bg-[#EFE7DA]'
+                        }`}
+                      >
+                        <span>{tag}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeletePurposeChip(e, tag)}
+                          className={`opacity-40 group-hover/chip:opacity-100 hover:text-red-500 cursor-pointer ${
+                            financeForm.purpose === tag ? 'text-white' : 'text-[#3A322C]'
+                          }`}
+                          title={`Delete "${tag}" tag`}
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-[#3A322C] mb-1">Payment Method</label>
+                  <select
+                    value={financeForm.payment_method}
+                    onChange={(e) => setFinanceForm(prev => ({ ...prev, payment_method: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl border border-[#EFE7DA] bg-white text-xs text-[#3A322C] focus:outline-none focus:border-[#8B3A3A]"
+                  >
+                    <option value="cash">Cash</option>
+                    <option value="upi">UPI / Online Transfer</option>
+                    <option value="bank_transfer">Bank Transfer / Cheque</option>
+                    <option value="other">Other</option>
+                  </select>
+
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={financeForm.notes}
+                      onChange={(e) => setFinanceForm(prev => ({ ...prev, notes: e.target.value }))}
+                      placeholder="Optional notes / bill reference..."
+                      className="w-full px-3 py-1.5 rounded-xl border border-[#EFE7DA] bg-white text-xs text-[#3A322C] focus:outline-none focus:border-[#8B3A3A]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-1 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={financeSubmitting}
+                  className="px-5 py-2 rounded-xl bg-[#8B3A3A] hover:bg-[#722F2F] text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>{financeSubmitting ? 'Recording...' : 'Record Finance Entry'}</span>
+                </button>
+              </div>
+            </form>
+
+            {/* Logged Transactions Ledger Table with Sortable Columns */}
+            {(() => {
+              const sortedFinanceItems = [...eventFinanceData.items].sort((a, b) => {
+                let res = 0;
+                if (financeSortField === 'person') {
+                  res = (a.person_name || '').localeCompare(b.person_name || '');
+                } else if (financeSortField === 'purpose') {
+                  res = (a.purpose || '').localeCompare(b.purpose || '');
+                } else if (financeSortField === 'mode') {
+                  res = (a.payment_method || '').localeCompare(b.payment_method || '');
+                } else if (financeSortField === 'type') {
+                  res = (a.transaction_type || '').localeCompare(b.transaction_type || '');
+                } else if (financeSortField === 'amount') {
+                  res = (a.amount || 0) - (b.amount || 0);
+                } else if (financeSortField === 'date') {
+                  const tA = a.created_at ? new Date(a.created_at).getTime() : 0;
+                  const tB = b.created_at ? new Date(b.created_at).getTime() : 0;
+                  res = tA - tB;
+                }
+                return financeSortDirection === 'asc' ? res : -res;
+              });
+
+              const handleToggleFinanceSort = (field) => {
+                if (financeSortField === field) {
+                  setFinanceSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+                } else {
+                  setFinanceSortField(field);
+                  setFinanceSortDirection('asc');
+                }
+              };
+
+              const renderFinanceSortHeader = (label, field, className = 'p-2.5') => {
+                const isActive = financeSortField === field;
+                return (
+                  <th
+                    onClick={() => handleToggleFinanceSort(field)}
+                    className={`${className} cursor-pointer hover:bg-[#EFE7DA]/70 transition-colors select-none group`}
+                    title={`Click to sort by ${label}`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className={isActive ? 'text-[#8B3A3A] font-extrabold' : 'text-[#8B3A3A]'}>
+                        {label}
+                      </span>
+                      <div className="flex flex-col text-[7px] leading-[6px] transition-colors">
+                        <span className={isActive && financeSortDirection === 'asc' ? 'text-[#8B3A3A] font-black' : 'text-[#3A322C]/30 group-hover:text-[#8B3A3A]/70'}>
+                          ▲
+                        </span>
+                        <span className={isActive && financeSortDirection === 'desc' ? 'text-[#8B3A3A] font-black' : 'text-[#3A322C]/30 group-hover:text-[#8B3A3A]/70'}>
+                          ▼
+                        </span>
+                      </div>
+                    </div>
+                  </th>
+                );
+              };
+
+              return (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-[#8B3A3A]">
+                    <span>Logged Transactions ({eventFinanceData.items.length})</span>
+                  </div>
+
+                  <div className="overflow-x-auto border border-[#EFE7DA] rounded-xl max-h-60 overflow-y-auto">
+                    <table className="w-full text-left text-xs text-[#3A322C]">
+                      <thead className="sticky top-0 bg-[#FDFBF7] border-b border-[#EFE7DA] text-[#8B3A3A] uppercase font-bold text-[10px]">
+                        <tr>
+                          {renderFinanceSortHeader('Person', 'person')}
+                          {renderFinanceSortHeader('Purpose / Notes', 'purpose')}
+                          {renderFinanceSortHeader('Mode', 'mode')}
+                          {renderFinanceSortHeader('Type', 'type')}
+                          {renderFinanceSortHeader('Amount (₹)', 'amount', 'p-2.5 text-right')}
+                          <th className="p-2.5 text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#EFE7DA]">
+                        {financeLoading ? (
+                          <tr>
+                            <td colSpan="6" className="p-4 text-center text-[#3A322C]/60 italic">
+                              Loading finances...
+                            </td>
+                          </tr>
+                        ) : sortedFinanceItems.length === 0 ? (
+                          <tr>
+                            <td colSpan="6" className="p-6 text-center text-[#3A322C]/60 italic">
+                              No finance transactions recorded for this event yet. Add an expense or sewa above.
+                            </td>
+                          </tr>
+                        ) : (
+                          sortedFinanceItems.map((item) => (
+                            <tr key={item.id} className="hover:bg-[#FDFBF7]/60 transition-colors">
+                              <td className="p-2.5 font-semibold text-[#3A322C]">
+                                {item.person_name}
+                              </td>
+                              <td className="p-2.5">
+                                <span className="font-medium text-[#8B3A3A]">{item.purpose}</span>
+                                {item.notes && (
+                                  <div className="text-[10px] text-[#3A322C]/60 italic">{item.notes}</div>
+                                )}
+                              </td>
+                              <td className="p-2.5 uppercase font-medium text-[10px] text-[#3A322C]/70">
+                                {item.payment_method.replace('_', ' ')}
+                              </td>
+                              <td className="p-2.5">
+                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                                  item.transaction_type === 'expense'
+                                    ? 'bg-[#C1554A]/15 text-[#C1554A]'
+                                    : 'bg-[#5B8C5B]/15 text-[#5B8C5B]'
+                                }`}>
+                                  {item.transaction_type === 'expense' ? 'Expense' : 'Sewa'}
+                                </span>
+                              </td>
+                              <td className="p-2.5 text-right font-mono font-bold text-xs">
+                                <span className={item.transaction_type === 'expense' ? 'text-[#C1554A]' : 'text-[#5B8C5B]'}>
+                                  {item.transaction_type === 'expense' ? '-' : '+'}₹{item.amount.toLocaleString('en-IN')}
+                                </span>
+                              </td>
+                              <td className="p-2.5 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteFinanceEntry(item.id)}
+                                  className="p-1 rounded-md text-[#C1554A] hover:bg-[#C1554A]/10 cursor-pointer transition-colors"
+                                  title="Delete Entry"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })()}
+
+          </div>
+        </div>
+      )}
+
+      {/* EVENT TASKS & DUTY ROSTER MODAL */}
+      {selectedTaskEvent && (
+        <div className="fixed inset-0 z-50 bg-[#3A322C]/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-4 sm:p-6 warm-shadow border border-[#EFE7DA] space-y-5 relative max-h-[92vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+            
+            {/* Modal Header */}
+            <div className="flex items-start justify-between pb-3 border-b border-[#EFE7DA]">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#8B3A3A] bg-[#8B3A3A]/10 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                  <ClipboardList className="w-3 h-3" /> Event Duty & Sewa Roster
+                </span>
+                <h3 className="font-serif-accent text-xl font-bold text-[#8B3A3A] mt-1">
+                  {selectedTaskEvent.title}
+                </h3>
+                <p className="text-xs text-[#3A322C]/70">
+                  {selectedTaskEvent.event_date} ({selectedTaskEvent.start_time} - {selectedTaskEvent.end_time} IST) · {selectedTaskEvent.venue_name || 'Central Mandir'}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedTaskEvent(null)}
+                className="p-1 text-[#3A322C]/40 hover:text-[#8B3A3A] cursor-pointer rounded-lg hover:bg-[#FDFBF7]"
+                title="Close Window"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Add Duty Form */}
+            <form onSubmit={handleAddTaskEntry} className="p-4 bg-[#FDFBF7] rounded-2xl border border-[#EFE7DA] space-y-3.5">
+              <span className="text-xs font-bold text-[#8B3A3A] flex items-center gap-1.5">
+                <Plus className="w-3.5 h-3.5" /> Assign Responsibility / Duty
+              </span>
+
+              {/* Person & Responsibility */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                {/* Person Selection (Searchable) */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-semibold text-[#3A322C]">Assigned Person</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomTaskPerson(!isCustomTaskPerson);
+                        setTaskForm(prev => ({ ...prev, user_id: '', person_name: '' }));
+                      }}
+                      className="text-[10px] text-[#8B3A3A] font-semibold hover:underline cursor-pointer"
+                    >
+                      {isCustomTaskPerson ? '← Select Registered Member' : '+ Other Person'}
+                    </button>
+                  </div>
+
+                  {isCustomTaskPerson ? (
+                    <input
+                      type="text"
+                      required
+                      value={taskForm.person_name}
+                      onChange={(e) => setTaskForm(prev => ({ ...prev, person_name: e.target.value }))}
+                      placeholder="Enter external person's name..."
+                      className="w-full px-3 py-2 rounded-xl border border-[#EFE7DA] bg-white text-xs text-[#3A322C] focus:outline-none focus:border-[#8B3A3A]"
+                    />
+                  ) : (
+                    <div className="relative">
+                      {taskForm.user_id ? (
+                        <div className="flex items-center justify-between px-3 py-1.5 rounded-xl border border-[#8B3A3A]/40 bg-[#8B3A3A]/5 text-xs">
+                          <div className="flex items-center gap-1.5 truncate">
+                            <span className="font-bold text-[#8B3A3A]">{taskForm.person_name}</span>
+                            <span className="text-[11px] text-[#3A322C]/60 font-mono">
+                              ({allUsers.find(u => u.id === taskForm.user_id)?.phone || ''})
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTaskForm(prev => ({ ...prev, user_id: '', person_name: '' }));
+                              setTaskPersonSearchQuery('');
+                              setIsTaskPersonDropdownOpen(true);
+                            }}
+                            className="p-1 text-[#8B3A3A] hover:bg-[#8B3A3A]/10 rounded-md cursor-pointer ml-1"
+                            title="Change Member"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="relative">
+                            <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-[#3A322C]/40" />
+                            <input
+                              type="text"
+                              value={taskPersonSearchQuery}
+                              onChange={(e) => {
+                                setTaskPersonSearchQuery(e.target.value);
+                                setIsTaskPersonDropdownOpen(true);
+                              }}
+                              onFocus={() => setIsTaskPersonDropdownOpen(true)}
+                              placeholder="Search member by name or phone..."
+                              className="w-full pl-8 pr-3 py-2 rounded-xl border border-[#EFE7DA] bg-white text-xs text-[#3A322C] focus:outline-none focus:border-[#8B3A3A]"
+                            />
+                          </div>
+
+                          {isTaskPersonDropdownOpen && (
+                            <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-[#EFE7DA] rounded-xl shadow-lg max-h-48 overflow-y-auto z-30 divide-y divide-[#EFE7DA]">
+                              {allUsers.filter(u =>
+                                !taskPersonSearchQuery ||
+                                (u.name && u.name.toLowerCase().includes(taskPersonSearchQuery.toLowerCase())) ||
+                                (u.phone && u.phone.includes(taskPersonSearchQuery))
+                              ).length === 0 ? (
+                                <div className="p-3 text-center text-xs text-[#3A322C]/50 italic">
+                                  No members match "{taskPersonSearchQuery}"
+                                </div>
+                              ) : (
+                                allUsers.filter(u =>
+                                  !taskPersonSearchQuery ||
+                                  (u.name && u.name.toLowerCase().includes(taskPersonSearchQuery.toLowerCase())) ||
+                                  (u.phone && u.phone.includes(taskPersonSearchQuery))
+                                ).map(u => (
+                                  <div
+                                    key={u.id}
+                                    onClick={() => {
+                                      setTaskForm(prev => ({
+                                        ...prev,
+                                        user_id: u.id,
+                                        person_name: u.name
+                                      }));
+                                      setIsTaskPersonDropdownOpen(false);
+                                      setTaskPersonSearchQuery('');
+                                    }}
+                                    className="p-2.5 hover:bg-[#FDFBF7] cursor-pointer flex items-center justify-between text-xs transition-colors"
+                                  >
+                                    <div>
+                                      <div className="font-semibold text-[#3A322C]">{u.name}</div>
+                                      <div className="text-[10px] text-[#3A322C]/60 font-mono">{u.phone}</div>
+                                    </div>
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#EFE7DA] text-[#8B3A3A] font-semibold capitalize">
+                                      {u.role || 'Member'}
+                                    </span>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Responsibility & Topic */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-semibold text-[#3A322C]">Responsibility / Duty</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddDutyInput(!showAddDutyInput)}
+                      className="text-[10px] text-[#8B3A3A] font-semibold hover:underline cursor-pointer flex items-center gap-0.5"
+                    >
+                      <Plus className="w-3 h-3" /> Add Duty Tag
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={taskForm.responsibility}
+                    onChange={(e) => setTaskForm(prev => ({ ...prev, responsibility: e.target.value }))}
+                    placeholder="e.g. Pravachan, Anchor, Kirtan"
+                    className="w-full px-3 py-2 rounded-xl border border-[#EFE7DA] bg-white text-xs text-[#3A322C] focus:outline-none focus:border-[#8B3A3A]"
+                  />
+
+                  {/* Inline Add Duty Tag */}
+                  {showAddDutyInput && (
+                    <div className="flex items-center gap-1.5 mt-2 p-2 bg-white rounded-xl border border-[#EFE7DA]">
+                      <input
+                        type="text"
+                        value={newDutyInput}
+                        onChange={(e) => setNewDutyInput(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddDutyChip(); } }}
+                        placeholder="Enter new duty tag (e.g. Stage Decor)..."
+                        className="flex-1 px-2.5 py-1 text-xs border border-[#EFE7DA] rounded-lg focus:outline-none focus:border-[#8B3A3A]"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddDutyChip}
+                        className="px-2.5 py-1 bg-[#8B3A3A] text-white rounded-lg text-xs font-semibold cursor-pointer"
+                      >
+                        Add
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setShowAddDutyInput(false); setNewDutyInput(''); }}
+                        className="p-1 text-[#3A322C]/50 hover:text-[#8B3A3A] cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Quick Duty Chips with Delete Access */}
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {dutyChips.map(tag => (
+                      <span
+                        key={tag}
+                        onClick={() => setTaskForm(prev => ({ ...prev, responsibility: tag }))}
+                        className={`group/chip inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium border transition-all cursor-pointer ${
+                          taskForm.responsibility === tag
+                            ? 'bg-[#8B3A3A] text-white border-[#8B3A3A]'
+                            : 'bg-white border-[#EFE7DA] text-[#8B3A3A] hover:bg-[#EFE7DA]'
+                        }`}
+                      >
+                        <span>{tag}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteDutyChip(e, tag)}
+                          className={`opacity-40 group-hover/chip:opacity-100 hover:text-red-500 cursor-pointer ${
+                            taskForm.responsibility === tag ? 'text-white' : 'text-[#3A322C]'
+                          }`}
+                          title={`Delete "${tag}" duty tag`}
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Topic / Notes */}
+              <div>
+                <label className="block font-semibold text-[#3A322C] mb-1 text-xs">Topic / Details / Notes (Optional)</label>
+                <input
+                  type="text"
+                  value={taskForm.topic_notes || ''}
+                  onChange={(e) => setTaskForm(prev => ({ ...prev, topic_notes: e.target.value }))}
+                  placeholder="e.g. Vachanamrut G-1 / Swamini Vato / Audio setup requirements..."
+                  className="w-full px-3 py-2 rounded-xl border border-[#EFE7DA] bg-white text-xs text-[#3A322C] focus:outline-none focus:border-[#8B3A3A]"
+                />
+              </div>
+
+              <div className="pt-1 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={taskSubmitting}
+                  className="px-5 py-2 rounded-xl bg-[#8B3A3A] hover:bg-[#722F2F] text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>{taskSubmitting ? 'Assigning...' : 'Assign Duty'}</span>
+                </button>
+              </div>
+            </form>
+
+            {/* Assigned Duties Table */}
+            {(() => {
+              const sortedTasks = [...(eventTasksData.items || [])].sort((a, b) => {
+                let res = 0;
+                if (taskSortField === 'responsibility') {
+                  res = (a.responsibility || '').localeCompare(b.responsibility || '');
+                } else if (taskSortField === 'person') {
+                  res = (a.person_name || '').localeCompare(b.person_name || '');
+                } else if (taskSortField === 'notes') {
+                  res = (a.topic_notes || '').localeCompare(b.topic_notes || '');
+                } else if (taskSortField === 'date') {
+                  const tA = a.created_at ? new Date(a.created_at).getTime() : 0;
+                  const tB = b.created_at ? new Date(b.created_at).getTime() : 0;
+                  res = tA - tB;
+                }
+                return taskSortDirection === 'asc' ? res : -res;
+              });
+
+              const handleToggleTaskSort = (field) => {
+                if (taskSortField === field) {
+                  setTaskSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+                } else {
+                  setTaskSortField(field);
+                  setTaskSortDirection('asc');
+                }
+              };
+
+              const renderTaskSortHeader = (label, field, className = 'p-2.5') => {
+                const isActive = taskSortField === field;
+                return (
+                  <th
+                    onClick={() => handleToggleTaskSort(field)}
+                    className={`${className} cursor-pointer hover:bg-[#EFE7DA]/70 transition-colors select-none group`}
+                    title={`Click to sort by ${label}`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className={isActive ? 'text-[#8B3A3A] font-extrabold' : 'text-[#8B3A3A]'}>
+                        {label}
+                      </span>
+                      <div className="flex flex-col text-[7px] leading-[6px] transition-colors">
+                        <span className={isActive && taskSortDirection === 'asc' ? 'text-[#8B3A3A] font-black' : 'text-[#3A322C]/30 group-hover:text-[#8B3A3A]/70'}>
+                          ▲
+                        </span>
+                        <span className={isActive && taskSortDirection === 'desc' ? 'text-[#8B3A3A] font-black' : 'text-[#3A322C]/30 group-hover:text-[#8B3A3A]/70'}>
+                          ▼
+                        </span>
+                      </div>
+                    </div>
+                  </th>
+                );
+              };
+
+              return (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-[#8B3A3A]">
+                    <span>Assigned Duties ({eventTasksData.items?.length || 0})</span>
+                  </div>
+
+                  <div className="overflow-x-auto border border-[#EFE7DA] rounded-xl max-h-60 overflow-y-auto">
+                    <table className="w-full text-left text-xs text-[#3A322C]">
+                      <thead className="sticky top-0 bg-[#FDFBF7] border-b border-[#EFE7DA] text-[#8B3A3A] uppercase font-bold text-[10px]">
+                        <tr>
+                          {renderTaskSortHeader('Responsibility', 'responsibility')}
+                          {renderTaskSortHeader('Assigned Person', 'person')}
+                          {renderTaskSortHeader('Topic / Notes', 'notes')}
+                          <th className="p-2.5 text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#EFE7DA]">
+                        {taskLoading ? (
+                          <tr>
+                            <td colSpan="4" className="p-4 text-center text-[#3A322C]/60 italic">
+                              Loading assigned duties...
+                            </td>
+                          </tr>
+                        ) : sortedTasks.length === 0 ? (
+                          <tr>
+                            <td colSpan="4" className="p-6 text-center text-[#3A322C]/60 italic">
+                              No duties assigned for this sabha yet. Use the form above to assign Pravachan, Anchor, Kirtan, etc.
+                            </td>
+                          </tr>
+                        ) : (
+                          sortedTasks.map((item) => (
+                            <tr key={item.id} className="hover:bg-[#FDFBF7]/60 transition-colors">
+                              <td className="p-2.5 font-bold text-[#8B3A3A]">
+                                {item.responsibility}
+                              </td>
+                              <td className="p-2.5 font-semibold text-[#3A322C]">
+                                {item.person_name}
+                                {item.user_phone && (
+                                  <div className="text-[10px] text-[#3A322C]/60 font-mono">{item.user_phone}</div>
+                                )}
+                              </td>
+                              <td className="p-2.5 text-[#3A322C]/80">
+                                {item.topic_notes || <span className="text-[#3A322C]/40 italic">-</span>}
+                              </td>
+                              <td className="p-2.5 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteTaskEntry(item.id)}
+                                  className="p-1 rounded-md text-[#C1554A] hover:bg-[#C1554A]/10 cursor-pointer transition-colors"
+                                  title="Delete Duty Assignment"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })()}
 
           </div>
         </div>
@@ -3240,7 +4699,7 @@ export default function AdminPortal({ user, onUserUpdated }) {
                 )}
                 <div>Time Slot: <strong>{eventForm.start_time} - {eventForm.end_time} IST</strong></div>
                 <div>Venue: <strong>{venues.find(v => v.id === eventForm.venue_id)?.name || 'Central Sabha Mandir'}</strong></div>
-                <div>QR Code Mode: <strong>{eventForm.event_type === 'recurring' ? 'Automatic Permanent Reusable QR' : 'Automatic Fresh Per-Event QR'}</strong></div>
+                <div>QR Code Mode: <strong>Venue-Based Reusable QR (same QR for all events at this location)</strong></div>
               </div>
             )}
 

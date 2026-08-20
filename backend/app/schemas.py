@@ -283,3 +283,65 @@ class AttendanceResponse(BaseModel):
 class PushSubscriptionSchema(BaseModel):
     endpoint: str
     keys: dict
+
+# Event Finance Schemas
+class EventFinanceCreate(BaseModel):
+    user_id: Optional[int] = None
+    person_name: str
+    amount: float
+    purpose: str
+    transaction_type: str = "expense"  # 'expense' | 'sewa_contribution'
+    payment_method: str = "cash"       # 'cash' | 'upi' | 'bank_transfer' | 'other'
+    notes: Optional[str] = None
+
+class EventFinanceResponse(BaseModel):
+    id: int
+    event_id: int
+    user_id: Optional[int] = None
+    person_name: str
+    amount: float
+    purpose: str
+    transaction_type: str
+    payment_method: str
+    notes: Optional[str] = None
+    created_by_id: Optional[int] = None
+    created_by_name: Optional[str] = None
+    created_at: datetime.datetime
+
+    class Config:
+        from_attributes = True
+
+class EventFinanceSummary(BaseModel):
+    event_id: int
+    total_expense: float
+    total_sewa: float
+    net_balance: float
+    item_count: int
+    items: List[EventFinanceResponse]
+
+# Event Task / Duty Roster Schemas
+class EventTaskCreate(BaseModel):
+    user_id: Optional[int] = None
+    person_name: str
+    responsibility: str
+    topic_notes: Optional[str] = None
+
+class EventTaskResponse(BaseModel):
+    id: int
+    event_id: int
+    user_id: Optional[int] = None
+    user_phone: Optional[str] = None
+    person_name: str
+    responsibility: str
+    topic_notes: Optional[str] = None
+    created_by_id: Optional[int] = None
+    created_by_name: Optional[str] = None
+    created_at: datetime.datetime
+
+    class Config:
+        from_attributes = True
+
+class EventTaskSummary(BaseModel):
+    event_id: int
+    item_count: int
+    items: List[EventTaskResponse]

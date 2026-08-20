@@ -179,11 +179,8 @@ def create_events(
         event_qr_mode = QRMode.REUSABLE
     else:
         dates = [req.event_date]
-        event_qr_mode = req.qr_mode or QRMode.PER_EVENT
-        if req.qr_mode == QRMode.REUSABLE:
-            qr_ref = venue.qr_code_reference
-        else:
-            qr_ref = f"event_{uuid.uuid4().hex[:12]}"
+        event_qr_mode = QRMode.REUSABLE  # Always reusable since QR is venue-based
+        qr_ref = venue.qr_code_reference  # Always use venue QR for all events at this location
 
     created_events = []
     for d in dates:

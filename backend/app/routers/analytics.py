@@ -44,7 +44,7 @@ def get_dashboard_analytics(
         ev_atts = [a for a in attendances if a.event_id == ev.id]
         p_count = len([a for a in ev_atts if a.status == AttendanceStatus.PRESENT])
         a_count = len([a for a in ev_atts if a.status in [AttendanceStatus.ABSENT, AttendanceStatus.EXCUSED]])
-        tot = len(ev_atts) if len(ev_atts) > 0 else total_members
+        tot = total_members if total_members > 0 else (len(ev_atts) or 1)
         pct = round((p_count / tot * 100)) if tot > 0 else 0
         total_present += p_count
 
@@ -65,7 +65,8 @@ def get_dashboard_analytics(
             "turnout_pct": pct
         })
 
-    overall_turnout_pct = round((total_present / total_records * 100)) if total_records > 0 else 0
+    potential_attendance = total_members * len(events) if total_members > 0 and len(events) > 0 else total_records
+    overall_turnout_pct = round((total_present / potential_attendance * 100)) if potential_attendance > 0 else 0
 
     # Determine Peak Sabha Day from attendance counts or scheduled event days
     if day_counts:
