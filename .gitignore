@@ -29,3 +29,6 @@ sabha_attendance.db
 .DS_Store
 Thumbs.db
 *.log
+
+# Nested repo clone (local only)
+Sabha_Attendance/

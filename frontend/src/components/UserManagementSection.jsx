@@ -1,6 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { Search, UserPlus, Pencil, CheckCircle2, AlertCircle, Eye, EyeOff, Lock, User, Phone, Mail, Calendar, Shield, Sparkles, X, Trash2, UploadCloud, FileSpreadsheet, Download, Cake, MapPin, Briefcase, GraduationCap, UserCheck } from 'lucide-react';
+import { Search, UserPlus, Pencil, CheckCircle2, AlertCircle, Eye, EyeOff, Lock, User, Phone, Mail, Calendar, Shield, Sparkles, X, Trash2, UploadCloud, FileSpreadsheet, Download, Cake, MapPin, Briefcase, GraduationCap, UserCheck, FileDown, FileText } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { apiFetch } from '../api';
+
+// All exportable fields with their labels and data keys
+const EXPORT_FIELDS = [
+  { key: 'name',             label: 'Full Name' },
+  { key: 'phone',            label: 'Mobile Number' },
+  { key: 'email',            label: 'Email' },
+  { key: 'dob',              label: 'Date of Birth' },
+  { key: 'area',             label: 'Area' },
+  { key: 'member_category',  label: 'Member Category' },
+  { key: 'role',             label: 'Role' },
+  { key: 'status',           label: 'Account Status' },
+  { key: 'is_working',       label: 'Currently Working?' },
+  { key: 'is_studying',      label: 'Currently Studying?' },
+  { key: 'occupation',       label: 'Occupation' },
+  { key: 'company_name',     label: 'Company Name' },
+  { key: 'education_stream', label: 'Education Stream' },
+  { key: 'study_details',    label: 'Study Details' },
+  { key: 'current_streak',   label: 'Current Streak' },
+  { key: 'lifetime_count',   label: 'Total Attendance Count' },
+  { key: 'created_at',       label: 'Registration Date' },
+];
 
 export default function UserManagementSection({ currentUser }) {
   const [users, setUsers] = useState([]);
@@ -43,8 +67,16 @@ export default function UserManagementSection({ currentUser }) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [deletingUser, setDeletingUser] = useState(null);
+
+  // Export modal state
+  const [exportFormat, setExportFormat] = useState('excel'); // 'excel' | 'pdf'
+  const [exportScope, setExportScope] = useState('all');    // 'all' | 'filtered'
+  const [selectedFields, setSelectedFields] = useState(
+    () => Object.fromEntries(EXPORT_FIELDS.map(f => [f.key, true]))
+  );
 
   // Bulk Import state
   const [bulkFile, setBulkFile] = useState(null);
@@ -86,6 +118,81 @@ export default function UserManagementSection({ currentUser }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  // ── Export helpers ──────────────────────────────────────────────
+  const handleOpenExportModal = () => {
+    setExportFormat('excel');
+    setExportScope('all');
+    setSelectedFields(Object.fromEntries(EXPORT_FIELDS.map(f => [f.key, true])));
+    setIsExportModalOpen(true);
+  };
+
+  const toggleAllFields = (val) =>
+    setSelectedFields(Object.fromEntries(EXPORT_FIELDS.map(f => [f.key, val])));
+
+  const activeFields = EXPORT_FIELDS.filter(f => selectedFields[f.key]);
+
+  const getExportData = () => {
+    const source = exportScope === 'filtered' ? filteredUsers : users;
+    return source.map(u => {
+      const row = {};
+      activeFields.forEach(({ key, label }) => {
+        let val = u[key] ?? '';
+        if (key === 'created_at' && val) {
+          val = new Date(val).toLocaleDateString('en-IN');
+        }
+        row[label] = val;
+      });
+      return row;
+    });
+  };
+
+  const handleExport = () => {
+    if (activeFields.length === 0) {
+      alert('Please select at least one field to export.');
+      return;
+    }
+    const today = new Date().toISOString().split('T')[0];
+    const filename = `Sabha_Members_${today}`;
+    const data = getExportData();
+
+    if (exportFormat === 'excel') {
+      const ws = XLSX.utils.json_to_sheet(data);
+      // Auto-size columns
+      const colWidths = activeFields.map(f => ({ wch: Math.max(f.label.length + 4, 18) }));
+      ws['!cols'] = colWidths;
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Members');
+      XLSX.writeFile(wb, `${filename}.xlsx`);
+    } else {
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+      const exportCount = exportScope === 'filtered' ? filteredUsers.length : users.length;
+      // Title
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(139, 58, 58);
+      doc.text('Sabha Attendance — Member Export', 40, 40);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Generated: ${new Date().toLocaleString('en-IN')}   |   Total Records: ${exportCount}`, 40, 58);
+
+      autoTable(doc, {
+        startY: 70,
+        head: [activeFields.map(f => f.label)],
+        body: data.map(row => activeFields.map(f => row[f.label] ?? '')),
+        styles: { fontSize: 7.5, cellPadding: 4, overflow: 'linebreak' },
+        headStyles: { fillColor: [139, 58, 58], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+        alternateRowStyles: { fillColor: [253, 251, 247] },
+        margin: { left: 40, right: 40 },
+        tableLineColor: [239, 231, 218],
+        tableLineWidth: 0.5,
+      });
+      doc.save(`${filename}.pdf`);
+    }
+    setIsExportModalOpen(false);
+    setSuccess(`Exported ${exportScope === 'filtered' ? filteredUsers.length : users.length} members as ${exportFormat.toUpperCase()} successfully!`);
   };
 
   const handleOpenBulkModal = () => {
@@ -378,7 +485,14 @@ export default function UserManagementSection({ currentUser }) {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={handleOpenExportModal}
+            className="w-full md:w-auto px-4 py-2.5 rounded-xl bg-[#2D6A8A] hover:bg-[#1E5070] text-white text-xs font-semibold shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+          >
+            <FileDown className="w-4 h-4" />
+            <span>Export Members</span>
+          </button>
           <button
             onClick={handleOpenBulkModal}
             className="w-full md:w-auto px-4 py-2.5 rounded-xl bg-[#5B8C5B] hover:bg-[#4A734A] text-white text-xs font-semibold shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
@@ -1305,6 +1419,150 @@ export default function UserManagementSection({ currentUser }) {
                 className="flex-1 py-2.5 rounded-xl bg-[#5B8C5B] hover:bg-[#4A734A] text-white font-semibold text-xs shadow-md transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-1.5 active:scale-98"
               >
                 {bulkUploading ? 'Importing Members...' : `Import ${bulkPreviewData.length} Members`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 4: EXPORT MEMBERS */}
+      {isExportModalOpen && (
+        <div className="fixed inset-0 z-50 bg-[#3A322C]/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[92vh] warm-shadow border border-[#EFE7DA] animate-in fade-in zoom-in-95 duration-200 flex flex-col my-auto">
+
+            {/* Header */}
+            <div className="flex items-center justify-between p-5 pb-3 border-b border-[#EFE7DA] shrink-0">
+              <h3 className="font-serif-accent text-lg font-bold text-[#2D6A8A] flex items-center gap-2">
+                <FileDown className="w-5 h-5 text-[#2D6A8A]" />
+                Export Members
+              </h3>
+              <button onClick={() => setIsExportModalOpen(false)} className="text-[#3A322C]/60 hover:text-[#8B3A3A] cursor-pointer p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-5">
+
+              {/* Format Selector */}
+              <div>
+                <div className="text-xs font-bold text-[#3A322C] mb-2 uppercase tracking-wide">Export Format</div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setExportFormat('excel')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 text-xs font-semibold transition-all cursor-pointer ${
+                      exportFormat === 'excel'
+                        ? 'border-[#5B8C5B] bg-[#5B8C5B]/10 text-[#5B8C5B]'
+                        : 'border-[#EFE7DA] bg-[#FDFBF7] text-[#3A322C]/70 hover:border-[#5B8C5B]/40'
+                    }`}
+                  >
+                    <FileSpreadsheet className="w-4 h-4" />
+                    Excel (.xlsx)
+                  </button>
+                  <button
+                    onClick={() => setExportFormat('pdf')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 text-xs font-semibold transition-all cursor-pointer ${
+                      exportFormat === 'pdf'
+                        ? 'border-[#C1554A] bg-[#C1554A]/10 text-[#C1554A]'
+                        : 'border-[#EFE7DA] bg-[#FDFBF7] text-[#3A322C]/70 hover:border-[#C1554A]/40'
+                    }`}
+                  >
+                    <FileText className="w-4 h-4" />
+                    PDF (.pdf)
+                  </button>
+                </div>
+              </div>
+
+              {/* Scope Selector */}
+              <div>
+                <div className="text-xs font-bold text-[#3A322C] mb-2 uppercase tracking-wide">Export Scope</div>
+                <div className="flex gap-2">
+                  <label className={`flex-1 flex items-center gap-2.5 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all ${
+                    exportScope === 'all' ? 'border-[#2D6A8A] bg-[#2D6A8A]/8 text-[#2D6A8A]' : 'border-[#EFE7DA] bg-[#FDFBF7] text-[#3A322C]/70 hover:border-[#2D6A8A]/30'
+                  }`}>
+                    <input type="radio" name="scope" value="all" checked={exportScope === 'all'} onChange={() => setExportScope('all')} className="accent-[#2D6A8A]" />
+                    <span className="text-xs font-semibold">
+                      All Members
+                      <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-[#2D6A8A]/15 text-[10px]">{users.length}</span>
+                    </span>
+                  </label>
+                  <label className={`flex-1 flex items-center gap-2.5 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all ${
+                    exportScope === 'filtered' ? 'border-[#E8A33D] bg-[#E8A33D]/8 text-[#D98A2B]' : 'border-[#EFE7DA] bg-[#FDFBF7] text-[#3A322C]/70 hover:border-[#E8A33D]/40'
+                  }`}>
+                    <input type="radio" name="scope" value="filtered" checked={exportScope === 'filtered'} onChange={() => setExportScope('filtered')} className="accent-[#E8A33D]" />
+                    <span className="text-xs font-semibold">
+                      Currently Filtered
+                      <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-[#E8A33D]/20 text-[10px]">{filteredUsers.length}</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Field Selector */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-xs font-bold text-[#3A322C] uppercase tracking-wide">Select Fields to Include</div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => toggleAllFields(true)}
+                      className="text-[11px] font-semibold text-[#2D6A8A] hover:underline cursor-pointer"
+                    >
+                      Select All
+                    </button>
+                    <span className="text-[#EFE7DA]">/</span>
+                    <button
+                      onClick={() => toggleAllFields(false)}
+                      className="text-[11px] font-semibold text-[#C1554A] hover:underline cursor-pointer"
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 bg-[#FDFBF7] rounded-xl border border-[#EFE7DA]">
+                  {EXPORT_FIELDS.map(({ key, label }) => (
+                    <label
+                      key={key}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer text-xs transition-all ${
+                        selectedFields[key]
+                          ? 'bg-[#2D6A8A]/10 border border-[#2D6A8A]/30 text-[#2D6A8A] font-semibold'
+                          : 'bg-white border border-[#EFE7DA] text-[#3A322C]/60 hover:bg-[#EFE7DA]/40'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={!!selectedFields[key]}
+                        onChange={e => setSelectedFields(prev => ({ ...prev, [key]: e.target.checked }))}
+                        className="accent-[#2D6A8A] w-3.5 h-3.5 shrink-0"
+                      />
+                      <span className="truncate">{label}</span>
+                    </label>
+                  ))}
+                </div>
+
+                {/* Selected count badge */}
+                <div className="mt-2 text-[11px] text-[#3A322C]/60 text-right">
+                  <span className="font-semibold text-[#2D6A8A]">{activeFields.length}</span> of {EXPORT_FIELDS.length} fields selected
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-5 pt-3 border-t border-[#EFE7DA] flex gap-2 shrink-0">
+              <button
+                onClick={() => setIsExportModalOpen(false)}
+                className="flex-1 py-2.5 rounded-xl border border-[#EFE7DA] text-[#3A322C] hover:bg-[#FDFBF7] font-semibold text-xs cursor-pointer active:scale-98"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleExport}
+                disabled={activeFields.length === 0}
+                className="flex-1 py-2.5 rounded-xl text-white font-semibold text-xs shadow-md transition-all cursor-pointer active:scale-98 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ background: exportFormat === 'excel' ? '#5B8C5B' : '#C1554A' }}
+              >
+                <Download className="w-4 h-4" />
+                Download {exportFormat === 'excel' ? 'Excel (.xlsx)' : 'PDF (.pdf)'}
               </button>
             </div>
           </div>
